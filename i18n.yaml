@@ -1,0 +1,18 @@
+error:
+  en: "System error"
+  zh: "系统错误"
+sysConfigError:
+  zh: "系统异常，请联系客服"
+  en: "System error, please contact customer service"
+authError:
+  en: "Need login"
+  zh: "需要登录"
+noPermission:
+  en: "No permission"
+  zh: "无权限"
+paramError:
+  en: "Param error"
+  zh: "参数错误"
+notFound:
+  en: "Data not found"
+  zh: "数据不存在"
