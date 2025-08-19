@@ -1,8 +1,10 @@
-package storage
+package tencent_cos
 
 import (
 	"context"
+	"fmt"
 	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/storage"
 	"github.com/tencentyun/cos-go-sdk-v5"
 	"io"
 	"net/http"
@@ -63,10 +65,10 @@ func (s *TencentCos) Path(url string) string {
 		return url
 	}
 	str, _ := strings.CutPrefix(url, s.endpoint)
-	return str
+	return strings.TrimLeft(str, "/")
 }
 
-func (s *TencentCos) Put(ctx context.Context, key string, r io.Reader) (*FileInfo, error) {
+func (s *TencentCos) Put(ctx context.Context, key string, r io.Reader) (*storage.FileInfo, error) {
 	key = strings.TrimLeft(key, "/")
 	opt := &cos.ObjectPutOptions{
 		ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{
@@ -78,11 +80,34 @@ func (s *TencentCos) Put(ctx context.Context, key string, r io.Reader) (*FileInf
 		return nil, errors.Wrap(err, "tencentCos Put failed")
 	}
 
-	return &FileInfo{
+	return &storage.FileInfo{
 		Url:      s.endpoint + "/" + key,
 		Endpoint: s.endpoint,
 		Path:     key,
 	}, nil
+}
+
+func (s *TencentCos) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	key = strings.TrimLeft(key, "/")
+	opt := &cos.ObjectGetOptions{}
+	res, err := s.client.Object.Get(ctx, key, opt)
+	if err != nil {
+		return nil, errors.Wrap(err, "tencentCos Get failed")
+	}
+	return res.Body, nil
+}
+
+func (s *TencentCos) Exist(ctx context.Context, key string) (bool, error) {
+	key = strings.TrimLeft(key, "/")
+	isExist, err := s.client.Object.IsExist(ctx, key)
+	return isExist, errors.Wrap(err, "tencentCos Exsits failed")
+}
+
+func (s *TencentCos) Rename(ctx context.Context, key, targetKey string) error {
+	sourceUrl := fmt.Sprintf("%s/%s", s.client.BaseURL.BucketURL.Host, strings.TrimLeft(key, "/"))
+	targetKey = strings.TrimLeft(targetKey, "/")
+	_, _, err := s.client.Object.Copy(ctx, targetKey, sourceUrl, nil)
+	return errors.Wrap(err, "tencentCos Rename failed")
 }
 
 func (s *TencentCos) Delete(ctx context.Context, key string) error {

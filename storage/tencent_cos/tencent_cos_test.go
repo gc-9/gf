@@ -1,4 +1,4 @@
-package storage
+package tencent_cos
 
 import (
 	"context"

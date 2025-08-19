@@ -52,7 +52,7 @@ func (s *Local) Path(url string) string {
 	}
 	p, found := strings.CutPrefix(url, s.endpoint)
 	if found {
-		return p
+		return strings.TrimLeft(p, "/")
 	}
 	return url
 }
@@ -78,6 +78,29 @@ func (s *Local) Put(ctx context.Context, key string, r io.Reader) (*FileInfo, er
 		Url:  s.endpoint + "/" + key,
 		Path: key,
 	}, nil
+}
+
+func (s *Local) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	f := s.root + "/" + strings.TrimLeft(key, "/")
+	return os.Open(f)
+}
+
+func (s *Local) Exist(ctx context.Context, key string) (bool, error) {
+	f := s.root + "/" + strings.TrimLeft(key, "/")
+	_, err := os.Stat(f)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, errors.Wrap(err, "local Exsit failed")
+}
+
+func (s *Local) Rename(ctx context.Context, key string, targetKey string) error {
+	sf := s.root + "/" + strings.TrimLeft(key, "/")
+	tf := s.root + "/" + strings.TrimLeft(targetKey, "/")
+	return errors.Wrap(os.Rename(sf, tf), "local rename failed")
 }
 
 func (s *Local) Delete(ctx context.Context, key string) error {

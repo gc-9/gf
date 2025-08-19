@@ -1,17 +1,18 @@
-package storage
+package aws_s3
 
 import (
 	"context"
-	"io"
-	"mime"
-	"path"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/storage"
+	"io"
+	"mime"
+	"path"
+	"strings"
 )
 
 type S3Config struct {
@@ -48,7 +49,7 @@ func (s *AwsS3) Name() string {
 	return "aws_s3"
 }
 
-func (s *AwsS3) Put(ctx context.Context, key string, r io.Reader) (*FileInfo, error) {
+func (s *AwsS3) Put(ctx context.Context, key string, r io.Reader) (*storage.FileInfo, error) {
 	contentType := mime.TypeByExtension(path.Ext(key))
 	if _, err := s.uploader.Upload(&s3manager.UploadInput{
 		Bucket:      aws.String(s.cfg.Bucket),
@@ -58,7 +59,7 @@ func (s *AwsS3) Put(ctx context.Context, key string, r io.Reader) (*FileInfo, er
 	}); err != nil {
 		return nil, err
 	}
-	return &FileInfo{
+	return &storage.FileInfo{
 		Path:     key,
 		Endpoint: s.cfg.Endpoint,
 		Url:      s.Url(key),
@@ -71,6 +72,17 @@ func (s *AwsS3) Delete(ctx context.Context, key string) error {
 		Key:    aws.String(key),
 	})
 	return err
+}
+
+func (s *AwsS3) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	res, err := s.svc.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(s.cfg.Bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "s3 Get failed")
+	}
+	return res.Body, nil
 }
 
 func (s *AwsS3) Url(key string) string {
@@ -88,5 +100,5 @@ func (s *AwsS3) Path(url string) string {
 		return url
 	}
 	str, _ := strings.CutPrefix(url, s.cfg.Endpoint)
-	return str
+	return strings.TrimLeft(str, "/")
 }
