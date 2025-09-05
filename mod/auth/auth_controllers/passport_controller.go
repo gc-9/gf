@@ -4,7 +4,7 @@ import (
 	"github.com/gc-9/gf/auth"
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	"github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/util"
@@ -14,7 +14,7 @@ import (
 )
 
 func NewPassportController(adminService *auth_services.AdminService,
-	captchaService auth.CaptchaProvide, confServer *config.Server) httpLib.Router {
+	captchaService auth.CaptchaProvide, confServer *config.Server) httplib.Router {
 	return &PassportController{
 		adminService:   adminService,
 		captchaService: captchaService,
@@ -28,12 +28,12 @@ type PassportController struct {
 	confServer     *config.Server
 }
 
-func (p *PassportController) Routes() []*httpLib.Route {
-	return []*httpLib.Route{
-		httpLib.NewRoute("POST", "/passport/login", "", p.Login),
-		httpLib.NewRoute("GET", "/passport/captcha", "", p.Captcha),
-		httpLib.NewRoute("GET", "/passport/logout", "", p.Logout),
-		httpLib.NewRoute("GET", "/passport/user", "", p.User),
+func (p *PassportController) Routes() []*httplib.Route {
+	return []*httplib.Route{
+		httplib.NewRoute("POST", "/passport/login", "", p.Login),
+		httplib.NewRoute("GET", "/passport/captcha", "", p.Captcha),
+		httplib.NewRoute("GET", "/passport/logout", "", p.Logout),
+		httplib.NewRoute("GET", "/passport/user", "", p.User),
 	}
 }
 
@@ -44,7 +44,7 @@ type LoginParam struct {
 	Captcha   string `json:"captcha" validate:"required"`
 }
 
-func (p *PassportController) Login(ctx httpLib.RequestContext, param *LoginParam) (map[string]interface{}, error) {
+func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam) (map[string]interface{}, error) {
 	ok, err := p.captchaService.Validate(param.CaptchaId, param.Captcha)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (p *PassportController) Login(ctx httpLib.RequestContext, param *LoginParam
 }
 
 // User get user
-func (p *PassportController) User(ctx httpLib.RequestContext) (map[string]interface{}, error) {
+func (p *PassportController) User(ctx httplib.RequestContext) (map[string]interface{}, error) {
 	authUser := ctx.AuthUser().(*types.Admin_RoleId)
 
 	admin, err := p.adminService.GetAdminRolePermissions(authUser.ID)
@@ -147,7 +147,7 @@ func (p *PassportController) User(ctx httpLib.RequestContext) (map[string]interf
 	return data, nil
 }
 
-func (p *PassportController) Logout(ctx httpLib.RequestContext) error {
+func (p *PassportController) Logout(ctx httplib.RequestContext) error {
 	if ctx.AuthUser() == nil {
 		return nil
 	}

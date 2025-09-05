@@ -4,6 +4,7 @@ go 1.21.6
 
 require (
 	github.com/afocus/captcha v0.0.0-20191010092841-4bd1f21c8868
+	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.2.3
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
@@ -21,6 +22,7 @@ require (
 	github.com/shopspring/decimal v1.4.0
 	github.com/sleagon/chinaid v0.4.2
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.55
+	github.com/volcengine/ve-tos-golang-sdk/v2 v2.7.21
 	go.uber.org/fx v1.23.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.28.0
@@ -64,6 +66,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/image v0.21.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 )

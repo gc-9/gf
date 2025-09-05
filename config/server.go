@@ -36,7 +36,7 @@ type Acl struct {
 
 func (c *Acl) AfterBind() {
 	if c.SuperRoleKey == "" {
-		c.SuperRoleKey = "admin"
+		c.SuperRoleKey = "super"
 	}
 	if c.AuthHeader == "" {
 		c.AuthHeader = "X-Auth-Token"

@@ -3,13 +3,13 @@ package controllers
 import (
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/types"
 	"xorm.io/xorm"
 )
 
-func NewNoteController(db *xorm.Engine) httpLib.Router {
+func NewNoteController(db *xorm.Engine) httplib.Router {
 	return &NoteController{
 		crud: crud.NewCrudDB[adminTypes.Note](db),
 	}
@@ -19,11 +19,11 @@ type NoteController struct {
 	crud *crud.CrudDB[adminTypes.Note]
 }
 
-func (p *NoteController) Routes() []*httpLib.Route {
-	return []*httpLib.Route{
-		httpLib.NewRoute("POST", "/sys/note/index", "备忘-列表", p.Index),
-		httpLib.NewRoute("POST", "/sys/note/show", "备忘-查看", p.Show),
-		httpLib.NewRoute("POST", "/sys/note/store", "备忘-保存", p.Store),
+func (p *NoteController) Routes() []*httplib.Route {
+	return []*httplib.Route{
+		httplib.NewRoute("POST", "/sys/note/index", "备忘-列表", p.Index),
+		httplib.NewRoute("POST", "/sys/note/show", "备忘-查看", p.Show),
+		httplib.NewRoute("POST", "/sys/note/store", "备忘-保存", p.Store),
 	}
 }
 

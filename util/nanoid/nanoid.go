@@ -6,6 +6,6 @@ import (
 
 var nanoidAlphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func GameUuid() string {
-	return gonanoid.MustGenerate(nanoidAlphabet, 10)
+func Generate(len int) string {
+	return gonanoid.MustGenerate(nanoidAlphabet, len)
 }

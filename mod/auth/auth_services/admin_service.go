@@ -197,9 +197,14 @@ func (t *AdminService) IsHasPermission(roleId int, roleKey, method, path string)
 }
 
 func (t *AdminService) GetAdminWithRoleId(uid int) (*adminTypes.Admin_RoleId, error) {
-	return crud.GetByOptions[adminTypes.Admin_RoleId](t.db, t.QueryWithRoleIdOption, func(query *xorm.Session) {
+	admin, err := crud.GetByOptions[adminTypes.Admin_RoleId](t.db, t.QueryWithRoleIdOption, func(query *xorm.Session) {
 		query.ID(uid)
 	})
+	if err != nil {
+		return nil, err
+	}
+	admin.IsSuper = admin.RoleKey == t.servConf.Acl.SuperRoleKey
+	return admin, nil
 }
 
 func (t *AdminService) GetAdminRolePermissions(uid int) (*adminTypes.Admin_R, error) {

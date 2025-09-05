@@ -1,4 +1,4 @@
-package httpLib
+package httplib
 
 import (
 	"github.com/gc-9/gf/i18n"
@@ -26,8 +26,7 @@ func HandlerDefaultHTTPError(i18n i18n.I18n) echo.HTTPErrorHandler {
 		}
 
 		msg := ""
-		he, ok := err.(*echo.HTTPError)
-		if ok {
+		if he, ok := err.(*echo.HTTPError); ok {
 			if he.Internal != nil {
 				if herr, ok := he.Internal.(*echo.HTTPError); ok {
 					he = herr
@@ -37,11 +36,15 @@ func HandlerDefaultHTTPError(i18n i18n.I18n) echo.HTTPErrorHandler {
 				httpStatus = http.StatusNotFound
 				code = types.StatusCodeNotFound
 				msg = he.Error()
+			} else if he.Code == http.StatusMethodNotAllowed {
+				httpStatus = http.StatusNotFound
+				code = types.StatusCodeNotFound
+				msg = he.Error()
 			}
-		} else {
+		}
+		if msg == "" {
 			msg = i18n.T(GetLocale(c), "error")
 		}
-
 		_ = c.JSON(
 			httpStatus,
 			&types.JsonResponse{Code: code, Message: msg},

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/util"
 	"github.com/samber/lo"
 	"reflect"
 	"strings"
@@ -79,7 +80,8 @@ type Filters map[string]interface{}
 func (f *Filters) QueryOption() func(session *xorm.Session) {
 	return func(session *xorm.Session) {
 		for k, f := range *f {
-			session.Where(builder.Eq{k: f})
+			ks := util.ToSnake(k)
+			session.Where(builder.Eq{ks: f})
 		}
 	}
 }
@@ -102,10 +104,10 @@ func (f *Filters) GetTimeRange(key string) []string {
 			return nil
 		}
 
-		t1, err1 := time.Parse("2006-01-02", t1str)
-		t2, err2 := time.Parse("2006-01-02", t2str)
+		t1, err1 := time.Parse("2006-01-02 15:04", t1str)
+		t2, err2 := time.Parse("2006-01-02 15:04", t2str)
 		if err1 == nil && err2 == nil {
-			return []string{t1.Format("2006-01-02"), t2.AddDate(0, 0, 1).Format("2006-01-02")}
+			return []string{t1.Format("2006-01-02 15:04"), t2.Format("2006-01-02 15:04")}
 		}
 	}
 	return nil

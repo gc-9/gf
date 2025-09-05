@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	"github.com/gc-9/gf/mod/admin/services"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/types"
@@ -11,7 +11,7 @@ import (
 	"xorm.io/xorm"
 )
 
-func NewAttachmentController(attachmentService *services.AttachmentService) httpLib.Router {
+func NewAttachmentController(attachmentService *services.AttachmentService) httplib.Router {
 	return &AttachmentController{
 		attachmentService: attachmentService,
 	}
@@ -21,11 +21,11 @@ type AttachmentController struct {
 	attachmentService *services.AttachmentService
 }
 
-func (p *AttachmentController) Routes() []*httpLib.Route {
-	return []*httpLib.Route{
-		httpLib.NewRoute("POST", "/sys/attachment/index", "附件-列表", p.Index),
-		httpLib.NewRoute("POST", "/sys/attachment/store", "附件-保存", p.Store),
-		httpLib.NewRoute("POST", "/sys/attachment/destroy", "附件-删除", p.Destroy),
+func (p *AttachmentController) Routes() []*httplib.Route {
+	return []*httplib.Route{
+		httplib.NewRoute("POST", "/sys/attachment/index", "附件-列表", p.Index),
+		httplib.NewRoute("POST", "/sys/attachment/store", "附件-保存", p.Store),
+		httplib.NewRoute("POST", "/sys/attachment/destroy", "附件-删除", p.Destroy),
 	}
 }
 
@@ -44,6 +44,7 @@ func (p *AttachmentController) Index(param *types.ParamPageQuery) (*types.PagerD
 				query.Where(builder.Eq{k: f})
 			}
 		}
+		query.OrderBy("id desc")
 	})
 	if err != nil {
 		return nil, err
@@ -61,14 +62,19 @@ func (p *AttachmentController) Index(param *types.ParamPageQuery) (*types.PagerD
 	}, nil
 }
 
-func (p *AttachmentController) Store(ctx httpLib.RequestContext) (*adminTypes.AttachmentItem, error) {
+func (p *AttachmentController) Store(ctx httplib.RequestContext) (*adminTypes.AttachmentItem, error) {
 	fh, err := ctx.FormFile("filedata")
 	if err != nil {
 		return nil, errors.New("文件为空")
 	}
 
+	isTmp := ctx.FormValue("isTmp")
 	authUser := ctx.AuthUser().(*adminTypes.Admin_RoleId)
+	if isTmp == "1" {
+		return p.attachmentService.StoreTmp(authUser.ID, fh)
+	}
 	return p.attachmentService.Store(authUser.ID, fh)
+
 }
 
 type paramAttachmentDestroy struct {

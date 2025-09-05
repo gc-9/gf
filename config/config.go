@@ -113,6 +113,7 @@ func (c *Config) loadFile(filename string) (err error) {
 	// auto bind app
 	var app App
 	err = c.Get("app", &app)
+	c.App = &app
 	return err
 }
 

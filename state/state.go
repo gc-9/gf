@@ -1,5 +1,5 @@
 package state
 
-import "github.com/gc-9/gf/httpLib"
+import "github.com/gc-9/gf/httplib"
 
-var Routes []*httpLib.Route
+var Routes []*httplib.Route

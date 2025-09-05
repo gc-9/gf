@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"bytes"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	"github.com/gc-9/gf/logger"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/util"
@@ -14,7 +14,7 @@ import (
 	"xorm.io/xorm"
 )
 
-func AdminAuditLog(routers []httpLib.Router, prefix string, db *xorm.Engine, ignorePath []*regexp.Regexp) echo.MiddlewareFunc {
+func AdminAuditLog(routers []httplib.Router, prefix string, db *xorm.Engine, ignorePath []*regexp.Regexp) echo.MiddlewareFunc {
 	permissionNames := make(map[string]string)
 	for _, g := range routers {
 		for _, r := range g.Routes() {
@@ -24,7 +24,7 @@ func AdminAuditLog(routers []httpLib.Router, prefix string, db *xorm.Engine, ign
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			ctx := c.(httpLib.RequestContext)
+			ctx := c.(httplib.RequestContext)
 
 			if ctx.AuthUser() == nil {
 				return next(c)
@@ -61,7 +61,7 @@ func AdminAuditLog(routers []httpLib.Router, prefix string, db *xorm.Engine, ign
 			path := strings.TrimPrefix(req.URL.Path, prefix)
 			uri := strings.TrimPrefix(req.URL.RequestURI(), prefix)
 			name, _ := permissionNames[req.Method+":"+path]
-			admin := ctx.AuthUser().(adminTypes.Admin_RoleId)
+			admin := ctx.AuthUser().(*adminTypes.Admin_RoleId)
 			_, err := db.Insert(&adminTypes.AdminLog{
 				Uid:       admin.ID,
 				Rid:       admin.RoleId,

@@ -1,7 +1,7 @@
 package di
 
 import (
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	"go.uber.org/fx"
 )
 
@@ -10,7 +10,7 @@ const routerTags = `group:"routers"`
 func AsRouter(f any) any {
 	return fx.Annotate(
 		f,
-		fx.As(new(httpLib.Router)),
+		fx.As(new(httplib.Router)),
 		fx.ResultTags(routerTags),
 	)
 }

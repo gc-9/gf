@@ -3,14 +3,14 @@ package auth_controllers
 import (
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/types"
 	"xorm.io/xorm"
 )
 
-func NewRoleController(db *xorm.Engine, roleService *auth_services.RoleService) httpLib.Router {
+func NewRoleController(db *xorm.Engine, roleService *auth_services.RoleService) httplib.Router {
 	return &roleController{
 		db:          db,
 		roleService: roleService,
@@ -22,12 +22,12 @@ type roleController struct {
 	roleService *auth_services.RoleService
 }
 
-func (p *roleController) Routes() []*httpLib.Route {
-	return []*httpLib.Route{
-		httpLib.NewRoute("POST", "/authRole/defined", "", p.Defined),
-		httpLib.NewRoute("POST", "/authRole/index", "角色-列表", p.Index),
-		httpLib.NewRoute("POST", "/authRole/show", "角色-查看", p.Show),
-		httpLib.NewRoute("POST", "/authRole/store", "角色-保存", p.Store),
+func (p *roleController) Routes() []*httplib.Route {
+	return []*httplib.Route{
+		httplib.NewRoute("POST", "/authRole/defined", "", p.Defined),
+		httplib.NewRoute("POST", "/authRole/index", "角色-列表", p.Index),
+		httplib.NewRoute("POST", "/authRole/show", "角色-查看", p.Show),
+		httplib.NewRoute("POST", "/authRole/store", "角色-保存", p.Store),
 	}
 }
 

@@ -3,8 +3,6 @@ package admin
 import (
 	"github.com/gc-9/gf/mod/admin/controllers"
 	"github.com/gc-9/gf/mod/admin/services"
-	"github.com/gc-9/gf/storage"
-	"xorm.io/xorm"
 )
 
 var (
@@ -15,9 +13,7 @@ var (
 	}
 
 	Services = []any{
-		func(db *xorm.Engine, storage storage.Storage) *services.AttachmentService {
-			return services.NewAttachmentService(db, "files", storage)
-		},
+		services.NewAttachmentService,
 		services.NewConfigService,
 		services.NewEncryptService,
 	}

@@ -3,13 +3,13 @@ package auth_controllers
 import (
 	"github.com/gc-9/gf/auth"
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/types"
 )
 
-func NewAdminController(aclRoleService *auth_services.RoleService, adminService *auth_services.AdminService) httpLib.Router {
+func NewAdminController(aclRoleService *auth_services.RoleService, adminService *auth_services.AdminService) httplib.Router {
 	return &adminController{
 		adminService:   adminService,
 		aclRoleService: aclRoleService,
@@ -21,15 +21,15 @@ type adminController struct {
 	aclRoleService *auth_services.RoleService
 }
 
-func (p *adminController) Routes() []*httpLib.Route {
-	return []*httpLib.Route{
-		httpLib.NewRoute("POST", "/admin/defined", "", p.Defined),
-		httpLib.NewRoute("POST", "/admin/index", "管理员-列表", p.Index),
-		httpLib.NewRoute("POST", "/admin/show", "管理员-查看", p.Show),
-		httpLib.NewRoute("POST", "/admin/store", "管理员-保存", p.Store),
-		httpLib.NewRoute("POST", "/admin/toggleStatus", "管理员-状态更新", p.ToggleStatus),
-		httpLib.NewRoute("GET", "/admin/showSelf", "管理员-查看自己", p.ShowSelf),
-		httpLib.NewRoute("POST", "/admin/storeSelf", "管理员-保存自己", p.StoreSelf),
+func (p *adminController) Routes() []*httplib.Route {
+	return []*httplib.Route{
+		httplib.NewRoute("POST", "/admin/defined", "", p.Defined),
+		httplib.NewRoute("POST", "/admin/index", "管理员-列表", p.Index),
+		httplib.NewRoute("POST", "/admin/show", "管理员-查看", p.Show),
+		httplib.NewRoute("POST", "/admin/store", "管理员-保存", p.Store),
+		httplib.NewRoute("POST", "/admin/toggleStatus", "管理员-状态更新", p.ToggleStatus),
+		httplib.NewRoute("GET", "/admin/showSelf", "管理员-查看自己", p.ShowSelf),
+		httplib.NewRoute("POST", "/admin/storeSelf", "管理员-保存自己", p.StoreSelf),
 	}
 }
 
@@ -66,7 +66,7 @@ func (p *adminController) Show(param *paramPassportShow) (*adminTypes.Admin_Role
 	return p.adminService.GetAdminWithRoleId(param.ID)
 }
 
-func (p *adminController) ShowSelf(ctx httpLib.RequestContext) (map[string]interface{}, error) {
+func (p *adminController) ShowSelf(ctx httplib.RequestContext) (map[string]interface{}, error) {
 	adminRole := ctx.AuthUser().(*adminTypes.Admin_RoleId)
 	admin, err := p.adminService.Get(adminRole.ID)
 	if err != nil {
@@ -97,7 +97,7 @@ type paramStoreSelf struct {
 	Mobile   string `json:"mobile" validate:"required,min=6,max=20"`
 }
 
-func (p *adminController) StoreSelf(ctx httpLib.RequestContext, param *paramStoreSelf) (err error) {
+func (p *adminController) StoreSelf(ctx httplib.RequestContext, param *paramStoreSelf) (err error) {
 	// store
 	up := adminTypes.Admin{
 		Name:   param.Name,
@@ -123,7 +123,7 @@ type paramStore struct {
 	RoleId   int    `json:"roleId" validate:"required,min=1"`
 }
 
-func (p *adminController) Store(ctx httpLib.RequestContext, param *paramStore) (err error) {
+func (p *adminController) Store(ctx httplib.RequestContext, param *paramStore) (err error) {
 	adminRole := ctx.AuthUser().(*adminTypes.Admin_RoleId)
 	role, err := p.adminService.GetRole(adminRole.ID)
 	if err != nil {

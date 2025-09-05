@@ -3,13 +3,13 @@ package auth_controllers
 import (
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/types"
 )
 
-func NewPermissionController(aclRoleService *auth_services.RoleService, aclPermissionService *auth_services.PermissionService) httpLib.Router {
+func NewPermissionController(aclRoleService *auth_services.RoleService, aclPermissionService *auth_services.PermissionService) httplib.Router {
 	return &aclPermissionController{
 		permissionService: aclPermissionService,
 		roleService:       aclRoleService,
@@ -21,14 +21,14 @@ type aclPermissionController struct {
 	roleService       *auth_services.RoleService
 }
 
-func (p *aclPermissionController) Routes() []*httpLib.Route {
-	return []*httpLib.Route{
-		httpLib.NewRoute("POST", "/authPermission/defined", "", p.Defined),
-		httpLib.NewRoute("POST", "/authPermission/index", "权限-列表全部", p.Index),
-		httpLib.NewRoute("POST", "/authPermission/all", "权限-全部列表", p.All),
-		httpLib.NewRoute("POST", "/authPermission/show", "权限-查看", p.Show),
-		httpLib.NewRoute("POST", "/authPermission/store", "权限-保存", p.Store),
-		httpLib.NewRoute("POST", "/authPermission/destroy", "权限-删除", p.Destroy),
+func (p *aclPermissionController) Routes() []*httplib.Route {
+	return []*httplib.Route{
+		httplib.NewRoute("POST", "/authPermission/defined", "", p.Defined),
+		httplib.NewRoute("POST", "/authPermission/index", "权限-列表全部", p.Index),
+		httplib.NewRoute("POST", "/authPermission/all", "权限-全部列表", p.All),
+		httplib.NewRoute("POST", "/authPermission/show", "权限-查看", p.Show),
+		httplib.NewRoute("POST", "/authPermission/store", "权限-保存", p.Store),
+		httplib.NewRoute("POST", "/authPermission/destroy", "权限-删除", p.Destroy),
 	}
 }
 

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
 	"github.com/gc-9/gf/mod/admin/types"
@@ -16,51 +17,69 @@ import (
 	"xorm.io/xorm"
 )
 
-func NewAttachmentService(db *xorm.Engine, prefix string, storage storage.Storage) *AttachmentService {
-	prefix = strings.Trim(prefix, "/")
-	return &AttachmentService{db: db, prefix: prefix,
+type AttachmentOptions struct {
+	KeyTpl    string `json:"keyTpl" yaml:"keyTpl"`
+	TmpKeyTpl string `json:"tmpKeyTpl" yaml:"tmpKeyTpl"`
+
+	tmpPrefix string
+}
+
+func NewAttachmentService(db *xorm.Engine, conf *config.Config, storage storage.Storage) (*AttachmentService, error) {
+	var options AttachmentOptions
+	err := conf.Get("attachmentService", &options)
+	if err != nil {
+		return nil, err
+	}
+	if options.KeyTpl == "" {
+		options.KeyTpl = "files/{date}/{uuid}.{ext}"
+	}
+	if options.TmpKeyTpl == "" {
+		options.TmpKeyTpl = "tmp_7d/{date}/{uuid}.{ext}"
+	}
+	options.tmpPrefix = strings.Split(options.TmpKeyTpl, "/")[0] + "/"
+
+	return &AttachmentService{db: db,
+		options: &options,
 		storage: storage,
 		CrudDB:  crud.NewCrudDB[types.Attachment](db),
-	}
+	}, nil
 }
 
 type AttachmentService struct {
 	*crud.CrudDB[types.Attachment]
-	prefix  string
 	db      *xorm.Engine
 	storage storage.Storage
+	options *AttachmentOptions
 }
 
 var nanoidAlphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func (t *AttachmentService) generatePath(ext string) string {
-	id := gonanoid.MustGenerate(nanoidAlphabet, 16)
-	var p string
-	if ext == "" {
-		p = id
-	} else {
-		p = id + "." + ext
-	}
-
-	_, isLocal := t.storage.(*storage.Local)
-	if isLocal {
-		p = time.Now().Format("20060102") + "/" + p
-	}
-
-	if t.prefix != "" {
-		p = t.prefix + "/" + p
-	}
-	return p
-}
 
 func (t *AttachmentService) Url(path string) string {
 	return t.storage.Url(path)
 }
 
 func (t *AttachmentService) Store(uid int, fh *multipart.FileHeader) (*types.AttachmentItem, error) {
-	ext := strings.TrimLeft(path.Ext(fh.Filename), ".")
-	key := t.generatePath(ext)
-	return t.StorePath(uid, fh, key, nil)
+	return t.StorePath(uid, fh, t.options.KeyTpl, nil)
+}
+
+func (t *AttachmentService) StoreTmp(uid int, fh *multipart.FileHeader) (*types.AttachmentItem, error) {
+	return t.StorePath(uid, fh, t.options.TmpKeyTpl, nil)
+}
+
+func (t *AttachmentService) GeneratePath(keyTpl string, ext string) string {
+	key := strings.Replace(keyTpl, "{date}", time.Now().Format("20060102"), -1)
+	key = strings.Replace(key, "{uuid}", gonanoid.MustGenerate(nanoidAlphabet, 16), -1)
+	key = strings.Replace(key, "{ext}", ext, -1)
+	return key
+}
+
+func (t *AttachmentService) RenameTmp2Normal(key string) (string, error) {
+	if !strings.HasPrefix(key, t.options.tmpPrefix) {
+		return key, nil
+	}
+	ext := strings.ToLower(strings.TrimLeft(path.Ext(key), "."))
+	targetKey := t.GeneratePath(t.options.KeyTpl, ext)
+	return targetKey, t.storage.Rename(context.Background(), key, targetKey)
 }
 
 func (t *AttachmentService) StorePath(uid int, fh *multipart.FileHeader, keyTpl string, allowsExt []string) (*types.AttachmentItem, error) {
@@ -87,7 +106,7 @@ func (t *AttachmentService) StorePath(uid int, fh *multipart.FileHeader, keyTpl 
 		return nil, errors.New("paramError_imageTypes")
 	}
 
-	key := strings.Replace(keyTpl, "{ext}", ext, -1)
+	key := t.GeneratePath(keyTpl, ext)
 	finfo, err := t.storage.Put(context.Background(), key, f)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+	"unsafe"
 )
 
 const charsets = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -135,4 +136,24 @@ func HideSome(s string, percent float32) string {
 
 	begin := int(math.Ceil(float64(l-w)) / 2)
 	return string(rues[:begin]) + strings.Repeat("*", w) + string(rues[begin+w:])
+}
+
+func b2s(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+// AnyKindOfString -> any_kind_of_string
+func ToSnake(name string) string {
+	newstr := make([]byte, 0, len(name)+1)
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if isUpper := 'A' <= c && c <= 'Z'; isUpper {
+			if i > 0 {
+				newstr = append(newstr, '_')
+			}
+			c += 'a' - 'A'
+		}
+		newstr = append(newstr, c)
+	}
+	return b2s(newstr)
 }

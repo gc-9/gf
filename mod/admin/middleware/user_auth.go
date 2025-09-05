@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/types"
 	"github.com/labstack/echo/v4"
@@ -55,14 +55,14 @@ func checkToken(userService *services.UserService, authService *auth.AuthService
 func UserAdminAuth(adminService *auth_services.AdminService, servConf *config.Server) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			c := ctx.(httpLib.RequestContext)
+			c := ctx.(httplib.RequestContext)
 
 			admin, err := adminService.CheckToken(c.Request().Header.Get(servConf.Acl.AuthHeader))
 			if err != nil {
-				return httpLib.SendResponse(c, nil, err)
+				return httplib.SendResponse(c, nil, err)
 			}
 			if admin == nil {
-				return httpLib.SendResponse(c, nil, &errors.ErrMessage{
+				return httplib.SendResponse(c, nil, &errors.ErrMessage{
 					Code:     types.StatusCodeUnauthorized,
 					HumanMsg: "authError",
 				})

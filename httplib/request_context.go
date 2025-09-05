@@ -1,4 +1,4 @@
-package httpLib
+package httplib
 
 import (
 	"github.com/gc-9/gf/config"

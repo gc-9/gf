@@ -2,7 +2,7 @@ package admin
 
 import (
 	"github.com/gc-9/gf/config"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	"github.com/gc-9/gf/mod/admin/middleware"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/state"
@@ -12,23 +12,21 @@ import (
 	"xorm.io/xorm"
 )
 
-func RegisterRouters(routers []httpLib.Router, e *echo.Echo, servConf *config.Server,
+func RegisterRouters(routers []httplib.Router, e *echo.Echo, servConf *config.Server,
 	db *xorm.Engine, adminService *auth_services.AdminService) error {
 
 	prefix := servConf.Prefix
 	g := e.Group(prefix)
 
 	// middlewares
-
 	logMiddleware := middleware.AdminAuditLog(routers, prefix, db, servConf.Acl.IgnoreAuditLogPaths)
-
 	permissionMiddleware := middleware.AdminAuthPermission(prefix, adminService, servConf.Acl.IgnoreAclPaths)
 	authMiddleware := middleware.UserAdminAuth(adminService, servConf)
 
 	authGroup := g.Group("", authMiddleware, permissionMiddleware, logMiddleware)
 	guestGroup := g
 
-	var routes []*httpLib.Route
+	var routes []*httplib.Route
 
 	// register routes
 	ignoreAuthPaths := servConf.Acl.IgnoreAuthPaths
@@ -43,18 +41,18 @@ func RegisterRouters(routers []httpLib.Router, e *echo.Echo, servConf *config.Se
 		}
 	}
 
-	// save state
+	// state
 	state.Routes = routes
 
 	// api doc
 	if servConf.DocPath != "" {
-		g.GET(servConf.DocPath, httpLib.HandlerApiDoc(servConf, routes))
+		g.GET(servConf.DocPath, httplib.HandlerApiDoc(servConf, routes))
 	}
 
 	return nil
 }
 
-func unAuthSkip(r *httpLib.Route, ignorePaths []*regexp.Regexp) bool {
+func unAuthSkip(r *httplib.Route, ignorePaths []*regexp.Regexp) bool {
 	for _, v := range ignorePaths {
 		if v.MatchString(r.Path) {
 			return true

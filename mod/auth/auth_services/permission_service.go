@@ -4,7 +4,7 @@ import (
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/state"
 	"regexp"
@@ -71,7 +71,7 @@ func (t *PermissionService) UpdateAclPermissions(servConf *config.Server) error 
 	return t.StoreAll(permissions)
 }
 
-func filterRoutesToPermissions(routes []*httpLib.Route, ignorePaths []*regexp.Regexp) []*adminTypes.AuthPermission {
+func filterRoutesToPermissions(routes []*httplib.Route, ignorePaths []*regexp.Regexp) []*adminTypes.AuthPermission {
 	var permissions []*adminTypes.AuthPermission
 
 outLoop:

@@ -2,13 +2,13 @@ package controllers
 
 import (
 	"github.com/gc-9/gf/crud"
-	"github.com/gc-9/gf/httpLib"
+	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/types"
 	"xorm.io/xorm"
 )
 
-func NewConfigController(db *xorm.Engine) httpLib.Router {
+func NewConfigController(db *xorm.Engine) httplib.Router {
 	return &ConfigController{
 		crud: crud.NewCrudDB[adminTypes.Config](db),
 	}
@@ -18,10 +18,10 @@ type ConfigController struct {
 	crud *crud.CrudDB[adminTypes.Config]
 }
 
-func (p *ConfigController) Routes() []*httpLib.Route {
-	return []*httpLib.Route{
-		httpLib.NewRoute("POST", "/sys/config/all", "系统配置-全部", p.Index),
-		httpLib.NewRoute("POST", "/sys/config/store", "系统配置-保存", p.Store),
+func (p *ConfigController) Routes() []*httplib.Route {
+	return []*httplib.Route{
+		httplib.NewRoute("POST", "/sys/config/all", "系统配置-全部", p.Index),
+		httplib.NewRoute("POST", "/sys/config/store", "系统配置-保存", p.Store),
 	}
 }
 
