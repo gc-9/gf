@@ -70,11 +70,19 @@ func (p *AttachmentController) Store(ctx httplib.RequestContext) (*adminTypes.At
 
 	isTmp := ctx.FormValue("isTmp")
 	authUser := ctx.AuthUser().(*adminTypes.Admin_RoleId)
-	if isTmp == "1" {
-		return p.attachmentService.StoreTmp(authUser.ID, fh)
+	if isTmp != "" {
+		finfo, err := p.attachmentService.StoreTmp(fh, nil)
+		if err != nil {
+			return nil, err
+		}
+		m := &adminTypes.Attachment{
+			Path:     finfo.Path,
+			Filename: fh.Filename,
+			Size:     int(fh.Size),
+		}
+		return &adminTypes.AttachmentItem{Attachment: m, Url: p.attachmentService.Url(m.Path)}, nil
 	}
 	return p.attachmentService.Store(authUser.ID, fh)
-
 }
 
 type paramAttachmentDestroy struct {

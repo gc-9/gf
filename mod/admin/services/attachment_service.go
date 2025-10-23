@@ -62,8 +62,38 @@ func (t *AttachmentService) Store(uid int, fh *multipart.FileHeader) (*types.Att
 	return t.StorePath(uid, fh, t.options.KeyTpl, nil)
 }
 
-func (t *AttachmentService) StoreTmp(uid int, fh *multipart.FileHeader) (*types.AttachmentItem, error) {
-	return t.StorePath(uid, fh, t.options.TmpKeyTpl, nil)
+func (t *AttachmentService) StoreTmp(fh *multipart.FileHeader, allowsExt []string) (*storage.FileInfo, error) {
+	keyTpl := t.options.TmpKeyTpl
+
+	f, err := fh.Open()
+	if err != nil {
+		return nil, errors.Wrap(err, "fh.Open failed")
+	}
+
+	ext := strings.ToLower(strings.TrimLeft(path.Ext(fh.Filename), "."))
+	if ext == "" {
+		f2, err := fh.Open()
+		if err != nil {
+			return nil, errors.Wrap(err, "fh.Open failed")
+		}
+		defer f2.Close()
+		// get real type
+		kind, _ := filetype.MatchReader(f2)
+		if kind == filetype.Unknown {
+			return nil, errors.New("paramError_imageTypes")
+		}
+		ext = kind.Extension
+	}
+	if len(allowsExt) > 0 && !lo.Contains(allowsExt, ext) {
+		return nil, errors.New("paramError_imageTypes")
+	}
+
+	key := t.GeneratePath(keyTpl, ext)
+	return t.storage.Put(context.Background(), key, f)
+}
+
+func (t *AttachmentService) GenerateTmpPath(ext string) string {
+	return t.GeneratePath(t.options.TmpKeyTpl, ext)
 }
 
 func (t *AttachmentService) GeneratePath(keyTpl string, ext string) string {
@@ -74,12 +104,31 @@ func (t *AttachmentService) GeneratePath(keyTpl string, ext string) string {
 }
 
 func (t *AttachmentService) RenameTmp2Normal(key string) (string, error) {
-	if !strings.HasPrefix(key, t.options.tmpPrefix) {
+	key = t.storage.Path(key)
+	if key == "" || !strings.HasPrefix(key, t.options.tmpPrefix) {
 		return key, nil
 	}
 	ext := strings.ToLower(strings.TrimLeft(path.Ext(key), "."))
 	targetKey := t.GeneratePath(t.options.KeyTpl, ext)
 	return targetKey, t.storage.Rename(context.Background(), key, targetKey)
+}
+
+func (t *AttachmentService) IsTempPath(key string) bool {
+	key = t.storage.Path(key)
+	if key == "" || !strings.HasPrefix(key, t.options.tmpPrefix) {
+		return false
+	}
+	return true
+}
+
+func (t *AttachmentService) CopyTmp2Normal(key string) (string, error) {
+	key = t.storage.Path(key)
+	if key == "" || !strings.HasPrefix(key, t.options.tmpPrefix) {
+		return key, nil
+	}
+	ext := strings.ToLower(strings.TrimLeft(path.Ext(key), "."))
+	targetKey := t.GeneratePath(t.options.KeyTpl, ext)
+	return targetKey, t.storage.Copy(context.Background(), key, targetKey)
 }
 
 func (t *AttachmentService) StorePath(uid int, fh *multipart.FileHeader, keyTpl string, allowsExt []string) (*types.AttachmentItem, error) {
