@@ -83,6 +83,15 @@ func (s *AliyunOSSS) Exist(ctx context.Context, key string) (bool, error) {
 }
 
 func (s *AliyunOSSS) Rename(ctx context.Context, key string, targetKey string) error {
+	err := s.Copy(ctx, key, targetKey)
+	if err != nil {
+		return err
+	}
+	s.Delete(ctx, key)
+	return nil
+}
+
+func (s *AliyunOSSS) Copy(ctx context.Context, key string, targetKey string) error {
 	key = s.Path(key)
 	_, err := s.client.CopyObject(ctx, &oss.CopyObjectRequest{
 		Bucket:       oss.Ptr(s.cfg.Bucket),
@@ -90,11 +99,7 @@ func (s *AliyunOSSS) Rename(ctx context.Context, key string, targetKey string) e
 		SourceBucket: oss.Ptr(s.cfg.Bucket),
 		SourceKey:    oss.Ptr(key),
 	})
-	if err != nil {
-		return errors.Wrap(err, "aliyunOss CopyObject failed")
-	}
-	s.Delete(ctx, key)
-	return nil
+	return errors.Wrap(err, "aliyunOss CopyObject failed")
 }
 
 func (s *AliyunOSSS) Url(key string) string {

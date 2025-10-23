@@ -103,6 +103,30 @@ func (s *Local) Rename(ctx context.Context, key string, targetKey string) error 
 	return errors.Wrap(os.Rename(sf, tf), "local rename failed")
 }
 
+func (s *Local) Copy(ctx context.Context, key string, targetKey string) error {
+	sf := s.root + "/" + strings.TrimLeft(key, "/")
+	tf := s.root + "/" + strings.TrimLeft(targetKey, "/")
+
+	source, err := os.Open(sf)
+	if err != nil {
+		return errors.Wrap(err, "local OpenFile failed")
+	}
+	defer source.Close()
+
+	dest, err := os.Create(tf)
+	if err != nil {
+		return errors.Wrap(err, "local create failed")
+	}
+	defer dest.Close()
+
+	err = os.MkdirAll(path.Dir(tf), 0644)
+	if err != nil {
+		return errors.Wrap(err, "local MkdirAll failed")
+	}
+	_, err = io.Copy(dest, source)
+	return errors.Wrap(err, "local copy failed")
+}
+
 func (s *Local) Delete(ctx context.Context, key string) error {
 	f := s.root + strings.TrimLeft(key, "/")
 

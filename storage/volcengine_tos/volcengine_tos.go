@@ -110,19 +110,22 @@ func (s *VolcengineTos) Exist(ctx context.Context, key string) (bool, error) {
 }
 
 func (s *VolcengineTos) Rename(ctx context.Context, key string, targetKey string) error {
+	err := s.Copy(ctx, key, targetKey)
+	if err != nil {
+		return err
+	}
+	return s.Delete(ctx, key)
+}
+
+func (s *VolcengineTos) Copy(ctx context.Context, key string, targetKey string) error {
 	copyInput := &tos.CopyObjectInput{
 		Bucket:    s.cfg.Bucket,
 		Key:       targetKey,
 		SrcBucket: s.cfg.Bucket,
 		SrcKey:    key,
 	}
-
 	_, err := s.client.CopyObject(ctx, copyInput)
-	if err != nil {
-		return err
-	}
-
-	return s.Delete(ctx, key)
+	return errors.Wrap(err, "tos CopyObject failed")
 }
 
 func (s *VolcengineTos) Url(key string) string {

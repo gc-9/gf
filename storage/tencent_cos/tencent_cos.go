@@ -104,10 +104,18 @@ func (s *TencentCos) Exist(ctx context.Context, key string) (bool, error) {
 }
 
 func (s *TencentCos) Rename(ctx context.Context, key, targetKey string) error {
+	err := s.Copy(ctx, key, targetKey)
+	if err != nil {
+		return err
+	}
+	return s.Delete(ctx, key)
+}
+
+func (s *TencentCos) Copy(ctx context.Context, key, targetKey string) error {
 	sourceUrl := fmt.Sprintf("%s/%s", s.client.BaseURL.BucketURL.Host, strings.TrimLeft(key, "/"))
 	targetKey = strings.TrimLeft(targetKey, "/")
 	_, _, err := s.client.Object.Copy(ctx, targetKey, sourceUrl, nil)
-	return errors.Wrap(err, "tencentCos Rename failed")
+	return errors.Wrap(err, "tencentCos Copy failed")
 }
 
 func (s *TencentCos) Delete(ctx context.Context, key string) error {
