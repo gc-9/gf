@@ -44,7 +44,9 @@ func SendResponse(c echo.Context, data interface{}, err error) error {
 			st := e2.StackTrace()
 			if st != nil {
 				// stacktrace humanMsg always be error
-				humanMsg = "error"
+				if humanMsg == "" {
+					humanMsg = "error"
+				}
 				logger.NoCaller().Errorf("%s%+v", err, st[0:1])
 			}
 		}
