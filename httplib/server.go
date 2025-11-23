@@ -140,7 +140,7 @@ func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*e
 			logger.NoCaller().Errorf("[PANIC RECOVER] %v %s\n", err, stack)
 
 			// HandlerDefaultHTTPError() will handle this return. So return nil.
-			return nil
+			return err
 		},
 	}))
 
