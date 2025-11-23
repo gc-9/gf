@@ -41,3 +41,37 @@ func NewDB(conf *config.Database) *xorm.Engine {
 
 	return engine
 }
+
+type DBManager struct {
+	Engines map[string]*xorm.Engine
+}
+
+func NewDBManager(confs map[string]*config.Database) *DBManager {
+	manager := &DBManager{
+		Engines: make(map[string]*xorm.Engine),
+	}
+	for name, conf := range confs {
+		manager.Engines[name] = NewDB(conf)
+	}
+	return manager
+}
+
+func (d *DBManager) GetEngine(name string) (*xorm.Engine, bool) {
+	engine, ok := d.Engines[name]
+	return engine, ok
+}
+
+func (d *DBManager) MustGetEngine(name string) *xorm.Engine {
+	engine, ok := d.Engines[name]
+	if !ok {
+		log.Panicf("db engine %s not found", name)
+	}
+	return engine
+}
+
+func (d *DBManager) Close() error {
+	for _, engine := range d.Engines {
+		engine.Close()
+	}
+	return nil
+}

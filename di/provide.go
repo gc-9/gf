@@ -72,6 +72,21 @@ func ProvideDB(lc fx.Lifecycle, conf *config.Config) (*xorm.Engine, error) {
 	return db, err
 }
 
+func ProvideDBManager(lc fx.Lifecycle, conf *config.Config) (*database.DBManager, error) {
+	confDatabases, err := config.Get[map[string]*config.Database](conf, "databases")
+	if err != nil {
+		return nil, err
+	}
+
+	db := database.NewDBManager(*confDatabases)
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			return db.Close()
+		},
+	})
+	return db, err
+}
+
 func ProvideStorage(conf *config.Config) (storage.Storage, error) {
 	confStorageT, err := config.Get[map[string]string](conf, "storage")
 	if err != nil {
