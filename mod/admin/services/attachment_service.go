@@ -10,6 +10,7 @@ import (
 	"github.com/h2non/filetype"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/samber/lo"
+	"io"
 	"mime/multipart"
 	"path"
 	"strings"
@@ -90,6 +91,11 @@ func (t *AttachmentService) StoreTmp(fh *multipart.FileHeader, allowsExt []strin
 
 	key := t.GeneratePath(keyTpl, ext)
 	return t.storage.Put(context.Background(), key, f)
+}
+
+func (t *AttachmentService) StoreTmpReader(r io.Reader, ext string) (*storage.FileInfo, error) {
+	key := t.GeneratePath(t.options.TmpKeyTpl, ext)
+	return t.storage.Put(context.Background(), key, r)
 }
 
 func (t *AttachmentService) GenerateTmpPath(ext string) string {
