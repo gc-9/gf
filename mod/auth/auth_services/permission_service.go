@@ -1,13 +1,14 @@
 package auth_services
 
 import (
+	"regexp"
+
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
 	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/state"
-	"regexp"
 	"xorm.io/xorm"
 )
 
@@ -43,24 +44,56 @@ func (t *PermissionService) StoreAll(permissions []*adminTypes.AuthPermission) e
 		return err
 	}
 
+	itemMap := make(map[string]*adminTypes.AuthPermission, len(items))
+	for _, item := range items {
+		key := item.Method + "|" + item.Path
+		itemMap[key] = item
+	}
+
 	newItems := make([]*adminTypes.AuthPermission, 0)
+	updatedItems := make([]*adminTypes.AuthPermission, 0)
+
 	for _, p := range permissions {
-		var isExist bool
-		for _, item := range items {
-			if item.Method == p.Method && item.Path == p.Path {
-				isExist = true
-				break
+		key := p.Method + "|" + p.Path
+		if exist, ok := itemMap[key]; ok {
+			// 同一路径和方法已存在，若名称有变化则更新
+			if exist.Name != p.Name {
+				exist.Name = p.Name
+				updatedItems = append(updatedItems, exist)
 			}
-		}
-		if isExist {
 			continue
 		}
 		newItems = append(newItems, p)
 	}
-	if len(newItems) > 0 {
-		_, err = t.db.Insert(newItems)
+
+	session := t.db.NewSession()
+	defer session.Close()
+
+	if err = session.Begin(); err != nil {
+		return errors.Wrap(err, "db begin failed")
 	}
-	return errors.Wrap(err, "db Insert failed")
+
+	if len(newItems) > 0 {
+		if _, err = session.Insert(newItems); err != nil {
+			_ = session.Rollback()
+			return errors.Wrap(err, "db Insert failed")
+		}
+	}
+
+	if len(updatedItems) > 0 {
+		for _, item := range updatedItems {
+			if _, err = session.ID(item.ID).Cols("name").Update(item); err != nil {
+				_ = session.Rollback()
+				return errors.Wrap(err, "db Update failed")
+			}
+		}
+	}
+
+	if err = session.Commit(); err != nil {
+		return errors.Wrap(err, "db Commit failed")
+	}
+
+	return nil
 }
 
 func (t *PermissionService) UpdateAclPermissions(servConf *config.Server) error {
