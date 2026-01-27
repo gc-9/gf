@@ -1,12 +1,14 @@
-package storage
+package local
 
 import (
 	"context"
-	"github.com/gc-9/gf/errors"
 	"io"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/storage"
 )
 
 type LocalOptions struct {
@@ -57,7 +59,7 @@ func (s *Local) Path(url string) string {
 	return url
 }
 
-func (s *Local) Put(ctx context.Context, key string, r io.Reader) (*FileInfo, error) {
+func (s *Local) Put(ctx context.Context, key string, r io.Reader) (*storage.FileInfo, error) {
 	key = strings.TrimLeft(key, "/")
 	fp := s.root + "/" + key
 
@@ -74,7 +76,7 @@ func (s *Local) Put(ctx context.Context, key string, r io.Reader) (*FileInfo, er
 
 	_, err = io.Copy(file, r)
 
-	return &FileInfo{
+	return &storage.FileInfo{
 		Url:  s.endpoint + "/" + key,
 		Path: key,
 	}, nil

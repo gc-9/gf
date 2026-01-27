@@ -2,21 +2,16 @@ package di
 
 import (
 	"context"
+
 	"github.com/gc-9/gf/auth"
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/database"
 	"github.com/gc-9/gf/i18n"
-	"github.com/gc-9/gf/storage"
-	"github.com/gc-9/gf/storage/aliyun_oss"
-	"github.com/gc-9/gf/storage/tencent_cos"
-	"github.com/gc-9/gf/storage/volcengine_tos"
+	storageService "github.com/gc-9/gf/storage/service"
 	"github.com/gc-9/gf/telegram"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"xorm.io/xorm"
-
-	"encoding/json"
-	"errors"
 )
 
 func ProvideConfig() *config.Config {
@@ -87,62 +82,13 @@ func ProvideDBManager(lc fx.Lifecycle, conf *config.Config) (*database.DBManager
 	return db, err
 }
 
-func ProvideStorage(conf *config.Config) (storage.Storage, error) {
-	confStorageT, err := config.Get[map[string]string](conf, "storage")
+func ProvideStorageManager(conf *config.Config) (*storageService.StorageManager, error) {
+	confStorages, err := config.Get[map[string]map[string]string](conf, "storages")
 	if err != nil {
 		return nil, err
 	}
-	confStorage := *confStorageT
 
-	driver := confStorage["driver"]
-	delete(confStorage, "driver")
-
-	switch driver {
-	case "tencent_cos":
-		// map to struct
-		buf, _ := json.Marshal(confStorage)
-		var op tencent_cos.TencentCosOptions
-		err := json.Unmarshal(buf, &op)
-		if err != nil {
-			return nil, errors.New("storage config error: " + err.Error())
-		}
-		return tencent_cos.NewTencentCos(&op)
-	case "local":
-		buf, _ := json.Marshal(confStorage)
-		var op storage.LocalOptions
-		err := json.Unmarshal(buf, &op)
-		if err != nil {
-			return nil, errors.New("storage config error: " + err.Error())
-		}
-		return storage.NewLocal(&op)
-	case "aliyun_oss":
-		buf, _ := json.Marshal(confStorage)
-		var op aliyun_oss.AliyunOSSConfig
-		err := json.Unmarshal(buf, &op)
-		if err != nil {
-			return nil, errors.New("storage config error: " + err.Error())
-		}
-		return aliyun_oss.NewAliyunOSS(&op)
-	case "volcengine_tos":
-		buf, _ := json.Marshal(confStorage)
-		var op volcengine_tos.TosConfig
-		err := json.Unmarshal(buf, &op)
-		if err != nil {
-			return nil, errors.New("storage config error: " + err.Error())
-		}
-		return volcengine_tos.NewVolcengineTos(&op)
-
-		//case "s3":
-		//	buf, _ := json.Marshal(confStorage)
-		//	var op storage.S3Config
-		//	err := json.Unmarshal(buf, &op)
-		//	if err != nil {
-		//		return nil, errors.New("storage config error: " + err.Error())
-		//	}
-		//	return storage.NewAwsS3(&op)
-	}
-
-	return nil, errors.New("unknown storage driver")
+	return storageService.NewStorageManager(*confStorages)
 }
 
 func NewBot(conf *config.Config) (*telegram.Bot, error) {
