@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Config struct {
 	ID        int    `json:"id" xorm:"pk autoincr 'id'"`
@@ -10,10 +13,32 @@ type Config struct {
 	Value     string `json:"value" xorm:"'value'"`
 	Type      string `json:"type" xorm:"'type'"`
 
+	Options ConfigOptions `json:"options" xorm:"'options'"`
+
 	CreatedAt time.Time `json:"createdAt" xorm:"created 'created_at'"`
 	UpdatedAt time.Time `json:"updatedAt" xorm:"updated 'updated_at'"`
 }
 
 func (t *Config) TableName() string {
 	return "config"
+}
+
+type ConfigOptions []any
+
+func (t *ConfigOptions) FromDB(buf []byte) error {
+	if len(buf) != 0 {
+		var f ConfigOptions
+		if err := json.Unmarshal(buf, &f); err != nil {
+			return err
+		}
+		*t = f
+	}
+	return nil
+}
+
+func (t *ConfigOptions) ToDB() ([]byte, error) {
+	if t == nil {
+		return nil, nil
+	}
+	return json.Marshal(t)
 }
