@@ -52,6 +52,7 @@ func (p *adminController) Index(param *types.ParamPageQuery) (*types.PagerData[*
 		"id",
 		"name",
 		"status",
+		"roleId",
 	}
 	param.Filters.Allows(allowFilters)
 
