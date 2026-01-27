@@ -3,12 +3,13 @@ package auth
 import (
 	"context"
 	"encoding/base64"
-	"github.com/gc-9/gf/errors"
-	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gc-9/gf/errors"
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 func NewAuthService(cachePrefix string, duration time.Duration, redisClient *redis.Client, encryptService *EncryptService) *AuthService {

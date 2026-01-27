@@ -3,6 +3,9 @@ package auth_services
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"time"
+
 	"github.com/gc-9/gf/auth"
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/crud"
@@ -11,8 +14,6 @@ import (
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/types"
 	"github.com/redis/go-redis/v9"
-	"strconv"
-	"time"
 	"xorm.io/builder"
 	"xorm.io/xorm"
 )
@@ -252,9 +253,12 @@ func (t *AdminService) CheckToken(tokenStr string) (*adminTypes.Admin_RoleId, er
 	}
 
 	key := "admin:loginState:" + strconv.Itoa(uid)
-	adminRoleId, err := getFallback[adminTypes.Admin_RoleId](t.redisClient, key, func() (*adminTypes.Admin_RoleId, error) {
+	adminRoleId, err := getFallback(t.redisClient, key, func() (*adminTypes.Admin_RoleId, error) {
 		return t.GetAdminWithRoleId(uid)
 	}, time.Second*10)
+	if err != nil {
+		return nil, err
+	}
 
 	// unusual logout
 	if adminRoleId == nil || adminRoleId.RoleId == 0 || adminRoleId.Status <= 0 {
