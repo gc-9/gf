@@ -89,7 +89,13 @@ func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*e
 					}
 				}
 
-				resDump := string(util.SubUtf8Bytes(resBody.Bytes(), maxDumpLength))
+				resDump := ""
+				resContentType := res.Header().Get("Content-Type")
+				if strings.HasPrefix(resContentType, echo.MIMEApplicationJSON) {
+					resDump = string(util.SubUtf8Bytes(resBody.Bytes(), maxDumpLength))
+				} else {
+					reqDump = resContentType + "\n--no dump-- "
+				}
 
 				tpl := "[request] %v %v %v %v %v"
 				args := []any{c.RealIP(), req.Method, req.URL, res.Status, time.Now().Sub(start)}
