@@ -3,12 +3,13 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/util"
-	"github.com/samber/lo"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/util"
+	"github.com/samber/lo"
 	"xorm.io/builder"
 	"xorm.io/xorm"
 )
@@ -36,6 +37,8 @@ type ParamPageQuery struct {
 	*ParamPager         //never be nil
 }
 
+type paramPageQuery ParamPageQuery
+
 func (p *ParamPageQuery) AfterBind() {
 	if p.Filters == nil {
 		p.Filters = Filters{}
@@ -56,8 +59,6 @@ func (p *ParamPageQuery) QueryOption() func(session *xorm.Session) {
 	}
 }
 
-type paramPageQuery ParamPageQuery
-
 func (p *ParamPageQuery) UnmarshalJSON(buf []byte) error {
 	var cp paramPageQuery
 	err := json.Unmarshal(buf, &cp)
@@ -70,6 +71,48 @@ func (p *ParamPageQuery) UnmarshalJSON(buf []byte) error {
 	}
 	if p.ParamPager == nil {
 		p.ParamPager = &ParamPager{}
+	}
+	p.FillDefaultValue()
+	return nil
+}
+
+type ParamOffsetQuery struct {
+	Filters   Filters `json:"filters"` //never be nil
+	PageSize  int     `json:"limit"`
+	OffsetId  string  `json:"offsetId"`  // 偏移id
+	Direction int     `json:"direction"` // 方向: <0向前, >0正常
+}
+
+type paramOffsetQuery ParamOffsetQuery
+
+func (p *ParamOffsetQuery) AfterBind() {
+	if p.Filters == nil {
+		p.Filters = Filters{}
+	}
+}
+
+func (p *ParamOffsetQuery) QueryOption() func(session *xorm.Session) {
+	return func(session *xorm.Session) {
+		session.Limit(p.PageSize)
+		p.Filters.QueryOption()(session)
+	}
+}
+
+func (t *ParamOffsetQuery) FillDefaultValue() {
+	if t.PageSize <= 0 {
+		t.PageSize = defaultPageSize
+	}
+}
+
+func (p *ParamOffsetQuery) UnmarshalJSON(buf []byte) error {
+	var cp paramOffsetQuery
+	err := json.Unmarshal(buf, &cp)
+	if err != nil {
+		return err
+	}
+	*p = ParamOffsetQuery(cp)
+	if p.Filters == nil {
+		p.Filters = make(Filters)
 	}
 	p.FillDefaultValue()
 	return nil
