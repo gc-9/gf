@@ -2,6 +2,12 @@ package services
 
 import (
 	"context"
+	"io"
+	"mime/multipart"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
@@ -10,11 +16,6 @@ import (
 	"github.com/h2non/filetype"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/samber/lo"
-	"io"
-	"mime/multipart"
-	"path"
-	"strings"
-	"time"
 	"xorm.io/xorm"
 )
 
@@ -89,20 +90,24 @@ func (t *AttachmentService) StoreTmp(fh *multipart.FileHeader, allowsExt []strin
 		return nil, errors.New("paramError_imageTypes")
 	}
 
-	key := t.GeneratePath(keyTpl, ext)
+	key := t.GeneratePathByTpl(keyTpl, ext)
 	return t.storage.Put(context.Background(), key, f)
 }
 
 func (t *AttachmentService) StoreTmpReader(r io.Reader, ext string) (*storage.FileInfo, error) {
-	key := t.GeneratePath(t.options.TmpKeyTpl, ext)
+	key := t.GeneratePathByTpl(t.options.TmpKeyTpl, ext)
 	return t.storage.Put(context.Background(), key, r)
 }
 
-func (t *AttachmentService) GenerateTmpPath(ext string) string {
-	return t.GeneratePath(t.options.TmpKeyTpl, ext)
+func (t *AttachmentService) GeneratePath(ext string) string {
+	return t.GeneratePathByTpl(t.options.KeyTpl, ext)
 }
 
-func (t *AttachmentService) GeneratePath(keyTpl string, ext string) string {
+func (t *AttachmentService) GenerateTmpPath(ext string) string {
+	return t.GeneratePathByTpl(t.options.TmpKeyTpl, ext)
+}
+
+func (t *AttachmentService) GeneratePathByTpl(keyTpl string, ext string) string {
 	key := strings.Replace(keyTpl, "{date}", time.Now().Format("20060102"), -1)
 	key = strings.Replace(key, "{uuid}", gonanoid.MustGenerate(nanoidAlphabet, 16), -1)
 	key = strings.Replace(key, "{ext}", ext, -1)
@@ -115,7 +120,7 @@ func (t *AttachmentService) RenameTmp2Normal(key string) (string, error) {
 		return key, nil
 	}
 	ext := strings.ToLower(strings.TrimLeft(path.Ext(key), "."))
-	targetKey := t.GeneratePath(t.options.KeyTpl, ext)
+	targetKey := t.GeneratePathByTpl(t.options.KeyTpl, ext)
 	return targetKey, t.storage.Rename(context.Background(), key, targetKey)
 }
 
@@ -133,7 +138,7 @@ func (t *AttachmentService) CopyTmp2Normal(key string) (string, error) {
 		return key, nil
 	}
 	ext := strings.ToLower(strings.TrimLeft(path.Ext(key), "."))
-	targetKey := t.GeneratePath(t.options.KeyTpl, ext)
+	targetKey := t.GeneratePathByTpl(t.options.KeyTpl, ext)
 	return targetKey, t.storage.Copy(context.Background(), key, targetKey)
 }
 
@@ -161,7 +166,7 @@ func (t *AttachmentService) StorePath(uid int, fh *multipart.FileHeader, keyTpl 
 		return nil, errors.New("paramError_imageTypes")
 	}
 
-	key := t.GeneratePath(keyTpl, ext)
+	key := t.GeneratePathByTpl(keyTpl, ext)
 	finfo, err := t.storage.Put(context.Background(), key, f)
 	if err != nil {
 		return nil, err
