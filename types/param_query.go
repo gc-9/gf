@@ -181,6 +181,9 @@ func (f *Filters) UnmarshalJSON(buf []byte) error {
 	}
 	filters := map[string]interface{}{}
 	for k, v := range m {
+		if v == nil {
+			continue
+		}
 		switch item := v.(type) {
 		case string:
 			item = strings.TrimSpace(item)
