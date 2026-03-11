@@ -1,8 +1,9 @@
 package crud
 
 import (
-	"github.com/gc-9/gf/types"
 	"reflect"
+
+	"github.com/gc-9/gf/types"
 	"xorm.io/xorm"
 )
 
@@ -59,6 +60,18 @@ func (s *CrudDB[T]) ExistByOptions(options ...QueryOption) (bool, error) {
 
 func (s *CrudDB[T]) List(options ...QueryOption) ([]*T, error) {
 	return List[T](s.db, options...)
+}
+
+func (s *CrudDB[T]) MapByInt(f func(item *T) int, options ...QueryOption) (map[int]*T, error) {
+	items, err := List[T](s.db, options...)
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[int]*T, len(items))
+	for _, item := range items {
+		m[f(item)] = item
+	}
+	return m, nil
 }
 
 func (s *CrudDB[T]) PagerData(pager *types.ParamPager, options ...QueryOption) (*types.PagerData[*T], error) {
