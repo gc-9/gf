@@ -129,3 +129,32 @@ func (s *RoleService) Store(param *types.ParamAclRoleStore) error {
 	err = tx.Commit()
 	return errors.Wrap(err, "db tx.Commit failed")
 }
+
+func (s *RoleService) Clone(id int) error {
+	item, err := s.Get(id)
+	if err != nil {
+		return err
+	}
+	if item == nil {
+		return errors.New("notFound")
+	}
+
+	ps, err := s.GetPermissions(id)
+	if err != nil {
+		return err
+	}
+
+	var pids []int
+	for _, v := range ps {
+		pids = append(pids, v.ID)
+	}
+
+	param := &types.ParamAclRoleStore{
+		Name:        item.Name + "_copy",
+		Key:         item.Key + "_copy",
+		Remark:      item.Remark,
+		Permissions: pids,
+	}
+
+	return s.Store(param)
+}

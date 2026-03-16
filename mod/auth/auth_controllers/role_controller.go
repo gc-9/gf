@@ -28,6 +28,7 @@ func (p *roleController) Routes() []*httplib.Route {
 		httplib.NewRoute("POST", "/authRole/index", "角色-列表", p.Index),
 		httplib.NewRoute("POST", "/authRole/show", "角色-查看", p.Show),
 		httplib.NewRoute("POST", "/authRole/store", "角色-保存", p.Store),
+		httplib.NewRoute("POST", "/authRole/clone", "角色-克隆", p.Clone),
 	}
 }
 
@@ -76,4 +77,8 @@ func (p *roleController) Show(param *types.ParamID) (*adminTypes.AclRole_Permiss
 
 func (p *roleController) Store(param *adminTypes.ParamAclRoleStore) error {
 	return p.roleService.Store(param)
+}
+
+func (p *roleController) Clone(param *types.ParamID) error {
+	return p.roleService.Clone(param.ID)
 }

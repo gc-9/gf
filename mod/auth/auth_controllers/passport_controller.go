@@ -1,6 +1,10 @@
 package auth_controllers
 
 import (
+	"math"
+	"strings"
+	"time"
+
 	"github.com/gc-9/gf/auth"
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/errors"
@@ -8,9 +12,6 @@ import (
 	"github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/util"
-	"math"
-	"strings"
-	"time"
 )
 
 func NewPassportController(adminService *auth_services.AdminService,
