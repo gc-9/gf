@@ -96,7 +96,16 @@ func (s *Local) Exist(ctx context.Context, key string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
-	return false, errors.Wrap(err, "local Exsit failed")
+	return false, errors.Wrap(err, "local Exist failed")
+}
+
+func (s *Local) Size(ctx context.Context, key string) (int64, error) {
+	f := s.root + "/" + strings.TrimLeft(key, "/")
+	stat, err := os.Stat(f)
+	if err != nil {
+		return 0, errors.Wrap(err, "local Size failed")
+	}
+	return stat.Size(), nil
 }
 
 func (s *Local) Rename(ctx context.Context, key string, targetKey string) error {

@@ -2,12 +2,13 @@ package aliyun_oss
 
 import (
 	"context"
+	"io"
+	"strings"
+
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss"
 	"github.com/aliyun/alibabacloud-oss-go-sdk-v2/oss/credentials"
 	"github.com/gc-9/gf/errors"
 	"github.com/gc-9/gf/storage"
-	"io"
-	"strings"
 )
 
 type AliyunOSSConfig struct {
@@ -79,7 +80,18 @@ func (s *AliyunOSSS) Get(ctx context.Context, key string) (io.ReadCloser, error)
 
 func (s *AliyunOSSS) Exist(ctx context.Context, key string) (bool, error) {
 	isExist, err := s.client.IsObjectExist(ctx, s.cfg.Bucket, key)
-	return isExist, errors.Wrap(err, "tencentCos Exsit failed")
+	return isExist, errors.Wrap(err, "aliyunOss Exist failed")
+}
+
+func (s *AliyunOSSS) Size(ctx context.Context, key string) (int64, error) {
+	res, err := s.client.HeadObject(ctx, &oss.HeadObjectRequest{
+		Bucket: oss.Ptr(s.cfg.Bucket),
+		Key:    oss.Ptr(key),
+	})
+	if err != nil {
+		return 0, errors.Wrap(err, "aliyunOss Size failed")
+	}
+	return res.ContentLength, nil
 }
 
 func (s *AliyunOSSS) Rename(ctx context.Context, key string, targetKey string) error {

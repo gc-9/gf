@@ -14,6 +14,7 @@ type Storage interface {
 	Exist(ctx context.Context, key string) (bool, error)
 	Rename(ctx context.Context, key string, targetKey string) error
 	Copy(ctx context.Context, key string, targetKey string) error
+	Size(ctx context.Context, key string) (int64, error)
 	Url(key string) string
 	Path(url string) string
 }

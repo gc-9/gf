@@ -85,6 +85,49 @@ func (s *AwsS3) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
+func (s *AwsS3) Exist(ctx context.Context, key string) (bool, error) {
+	_, err := s.svc.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(s.cfg.Bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		// Use Aerr to check for 404
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *AwsS3) Size(ctx context.Context, key string) (int64, error) {
+	res, err := s.svc.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(s.cfg.Bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return 0, errors.Wrap(err, "s3 Size failed")
+	}
+	if res.ContentLength == nil {
+		return 0, nil
+	}
+	return *res.ContentLength, nil
+}
+
+func (s *AwsS3) Rename(ctx context.Context, key string, targetKey string) error {
+	err := s.Copy(ctx, key, targetKey)
+	if err != nil {
+		return err
+	}
+	return s.Delete(ctx, key)
+}
+
+func (s *AwsS3) Copy(ctx context.Context, key string, targetKey string) error {
+	_, err := s.svc.CopyObjectWithContext(ctx, &s3.CopyObjectInput{
+		Bucket:     aws.String(s.cfg.Bucket),
+		Key:        aws.String(targetKey),
+		CopySource: aws.String(s.cfg.Bucket + "/" + key),
+	})
+	return errors.Wrap(err, "s3 Copy failed")
+}
+
 func (s *AwsS3) Url(key string) string {
 	if key == "" {
 		return key

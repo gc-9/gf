@@ -100,7 +100,16 @@ func (s *TencentCos) Get(ctx context.Context, key string) (io.ReadCloser, error)
 func (s *TencentCos) Exist(ctx context.Context, key string) (bool, error) {
 	key = strings.TrimLeft(key, "/")
 	isExist, err := s.client.Object.IsExist(ctx, key)
-	return isExist, errors.Wrap(err, "tencentCos Exsits failed")
+	return isExist, errors.Wrap(err, "tencentCos Exist failed")
+}
+
+func (s *TencentCos) Size(ctx context.Context, key string) (int64, error) {
+	key = strings.TrimLeft(key, "/")
+	res, err := s.client.Object.Head(ctx, key, nil)
+	if err != nil {
+		return 0, errors.Wrap(err, "tencentCos Size failed")
+	}
+	return res.ContentLength, nil
 }
 
 func (s *TencentCos) Rename(ctx context.Context, key, targetKey string) error {

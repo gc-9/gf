@@ -109,6 +109,20 @@ func (s *VolcengineTos) Exist(ctx context.Context, key string) (bool, error) {
 	return true, nil
 }
 
+func (s *VolcengineTos) Size(ctx context.Context, key string) (int64, error) {
+	headInput := &tos.HeadObjectV2Input{
+		Bucket: s.cfg.Bucket,
+		Key:    key,
+	}
+
+	res, err := s.client.HeadObjectV2(ctx, headInput)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.ContentLength, nil
+}
+
 func (s *VolcengineTos) Rename(ctx context.Context, key string, targetKey string) error {
 	err := s.Copy(ctx, key, targetKey)
 	if err != nil {
