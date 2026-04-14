@@ -93,6 +93,13 @@ func Update[T any](db *xorm.Engine, id int, up interface{}, options ...QueryOpti
 	return UpdateTX[T](session, id, up, options...)
 }
 
+func UpdateByOptions[T any](db *xorm.Engine, up any, options ...QueryOption) (int, error) {
+	session := db.NewSession()
+	defer session.Close()
+
+	return UpdateByOptionsTX[T](session, up, options...)
+}
+
 func Delete[T any](db *xorm.Engine, id int) (int, error) {
 	session := db.NewSession()
 	defer session.Close()
@@ -227,6 +234,18 @@ func PagerDataTX[T any](session *xorm.Session, pager *types.ParamPager, options 
 
 func UpdateTX[T any](session *xorm.Session, id int, up interface{}, options ...QueryOption) (int, error) {
 	session.ID(id)
+	for _, opFunc := range options {
+		opFunc(session)
+	}
+	var t T
+	c, err := session.Table(&t).Update(up)
+	if err != nil {
+		return 0, errors.Wrap(err, "db Update failed")
+	}
+	return int(c), err
+}
+
+func UpdateByOptionsTX[T any](session *xorm.Session, up any, options ...QueryOption) (int, error) {
 	for _, opFunc := range options {
 		opFunc(session)
 	}

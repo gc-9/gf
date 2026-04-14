@@ -83,6 +83,10 @@ func (s *CrudDB[T]) Update(id int, up any, options ...QueryOption) (int, error) 
 	return Update[T](s.db, id, up, options...)
 }
 
+func (s *CrudDB[T]) UpdateByOptions(up any, options ...QueryOption) (int, error) {
+	return UpdateByOptions[T](s.db, up, options...)
+}
+
 func (s *CrudDB[T]) Delete(id int) (int, error) {
 	return Delete[T](s.db, id)
 }

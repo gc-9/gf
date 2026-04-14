@@ -1,8 +1,9 @@
 package crud
 
 import (
-	"github.com/gc-9/gf/types"
 	"reflect"
+
+	"github.com/gc-9/gf/types"
 	"xorm.io/xorm"
 )
 
@@ -59,6 +60,10 @@ func (s *CrudTX[T]) Creates(ts []*T) (int, error) {
 
 func (s *CrudTX[T]) Update(id int, t *T, options ...QueryOption) (int, error) {
 	return UpdateTX[T](s.tx, id, t, options...)
+}
+
+func (s *CrudTX[T]) UpdateByOptions(up any, options ...QueryOption) (int, error) {
+	return UpdateByOptionsTX[T](s.tx, up, options...)
 }
 
 func (s *CrudTX[T]) Delete(id int) (int, error) {
