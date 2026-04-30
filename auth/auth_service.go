@@ -7,18 +7,33 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/util"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
-func NewAuthService(cachePrefix string, duration time.Duration, redisClient *redis.Client, encryptService *EncryptService) *AuthService {
-	return &AuthService{cachePrefix: cachePrefix, duration: duration, redisClient: redisClient, encryptService: encryptService}
+func NewAuthService(config config.AuthConfig, redisClient *redis.Client, encryptService *EncryptService) *AuthService {
+	if config.CachePrefix == "" {
+		config.CachePrefix = "auth_admin"
+	}
+	if config.Duration == 0 {
+		config.Duration = time.Hour * 24
+	}
+	return &AuthService{
+		cachePrefix:    config.CachePrefix,
+		duration:       config.Duration,
+		maxDevices:     config.MaxDevices,
+		redisClient:    redisClient,
+		encryptService: encryptService,
+	}
 }
 
 type AuthService struct {
 	cachePrefix    string
 	duration       time.Duration
+	maxDevices     int
 	redisClient    *redis.Client
 	encryptService *EncryptService
 }
@@ -45,24 +60,58 @@ func (t *AuthService) decryptText(text string) string {
 	return string(buf)
 }
 
-func (t *AuthService) MakeLogin(uid int, device string) (string, error) {
+func (t *AuthService) MakeLogin(uid int, deviceInfo string) (string, error) {
+	deviceId := strings.Replace(uuid.New().String(), "-", "", -1)
 	token := strings.Replace(uuid.New().String(), "-", "", -1)
-	key := t.getKey(uid, device)
-	timeStr := time.Now().Format(time.DateTime)
-	_, err := t.redisClient.HMSet(context.Background(), key,
+	key := t.getKey(uid, deviceId)
+	now := time.Now()
+	timeStr := now.Format(time.DateTime)
+
+	ctx := context.Background()
+	pipe := t.redisClient.Pipeline()
+	pipe.HMSet(ctx, key,
 		"token", token,
 		"loginAt", timeStr,
 		"lastActiveAt", timeStr,
-	).Result()
+		"deviceInfo", util.Substring(deviceInfo, 0, 200),
+	)
+	pipe.Expire(ctx, key, t.getDuration())
+
+	zsetKey := t.cachePrefix + ":devices:" + strconv.Itoa(uid)
+	pipe.ZAdd(ctx, zsetKey, redis.Z{
+		Score:  float64(now.UnixMilli()),
+		Member: key,
+	})
+	pipe.Expire(ctx, zsetKey, t.getDuration())
+
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "redis HMSet failed")
 	}
-	_, err = t.redisClient.Expire(context.Background(), key, t.getDuration()).Result()
-	if err != nil {
-		return "", errors.Wrap(err, "redis Expire failed")
+
+	maxDev := t.maxDevices
+	if maxDev <= 0 {
+		maxDev = 1
 	}
 
-	authText := strconv.Itoa(uid) + ":" + device + ":" + token
+	count, err := t.redisClient.ZCard(ctx, zsetKey).Result()
+	if err == nil && count > int64(maxDev) {
+		remCount := count - int64(maxDev)
+		oldDevices, _ := t.redisClient.ZRange(ctx, zsetKey, 0, remCount-1).Result()
+		if len(oldDevices) > 0 {
+			var remMembers []interface{}
+			for _, od := range oldDevices {
+				remMembers = append(remMembers, od)
+			}
+
+			delPipe := t.redisClient.Pipeline()
+			delPipe.Del(ctx, oldDevices...)
+			delPipe.ZRem(ctx, zsetKey, remMembers...)
+			_, _ = delPipe.Exec(ctx)
+		}
+	}
+
+	authText := strconv.Itoa(uid) + ":" + deviceId + ":" + token
 	return t.encryptText(authText), err
 }
 
@@ -82,7 +131,8 @@ func (t *AuthService) CheckToken(tokenStr string) (int, error) {
 	}
 
 	key := t.getKey(uid, device)
-	tokenStore, err := t.redisClient.HGet(context.Background(), key, "token").Result()
+	ctx := context.Background()
+	tokenStore, err := t.redisClient.HGet(ctx, key, "token").Result()
 	if err != nil {
 		if err == redis.Nil {
 			return 0, nil
@@ -92,23 +142,40 @@ func (t *AuthService) CheckToken(tokenStr string) (int, error) {
 	if tokenStore != token {
 		return 0, nil
 	}
-	_, err = t.redisClient.HSet(context.Background(), key, "lastActiveAt", time.Now().Format(time.DateTime)).Result()
+
+	now := time.Now()
+	pipe := t.redisClient.Pipeline()
+	pipe.HSet(ctx, key, "lastActiveAt", now.Format(time.DateTime))
+	pipe.Expire(ctx, key, t.getDuration())
+
+	zsetKey := t.cachePrefix + ":devices:" + strconv.Itoa(uid)
+	pipe.ZAdd(ctx, zsetKey, redis.Z{
+		Score:  float64(now.UnixMilli()),
+		Member: key,
+	})
+	pipe.Expire(ctx, zsetKey, t.getDuration())
+
+	_, err = pipe.Exec(ctx)
 	if err != nil {
-		return 0, errors.Wrap(err, "redis HSet failed")
-	}
-	_, err = t.redisClient.Expire(context.Background(), key, t.getDuration()).Result()
-	if err != nil {
-		return 0, errors.Wrap(err, "redis Expire failed")
+		return 0, errors.Wrap(err, "redis pipeline exec failed")
 	}
 
-	return uid, err
+	return uid, nil
 }
 
-func (t *AuthService) Logout(uid int, device string) error {
+/* func (t *AuthService) Logout(uid int, device string) error {
+	device = t.hashDevice(device)
 	key := t.getKey(uid, device)
-	_, err := t.redisClient.Del(context.Background(), key).Result()
+	zsetKey := t.cachePrefix + ":devices:" + strconv.Itoa(uid)
+
+	ctx := context.Background()
+	pipe := t.redisClient.Pipeline()
+	pipe.Del(ctx, key)
+	pipe.ZRem(ctx, zsetKey, device)
+	_, err := pipe.Exec(ctx)
+
 	return errors.Wrap(err, "redis Del failed")
-}
+} */
 
 func (t *AuthService) LogoutByToken(tokenStr string) error {
 	if len(tokenStr) < 10 {
@@ -124,5 +191,15 @@ func (t *AuthService) LogoutByToken(tokenStr string) error {
 	if err != nil {
 		return nil
 	}
-	return t.Logout(uid, device)
+
+	key := t.getKey(uid, device)
+	zsetKey := t.cachePrefix + ":devices:" + strconv.Itoa(uid)
+
+	ctx := context.Background()
+	pipe := t.redisClient.Pipeline()
+	pipe.Del(ctx, key)
+	pipe.ZRem(ctx, zsetKey, key)
+	_, err = pipe.Exec(ctx)
+
+	return errors.Wrap(err, "redis Del failed")
 }

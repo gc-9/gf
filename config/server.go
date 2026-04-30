@@ -1,6 +1,9 @@
 package config
 
-import "regexp"
+import (
+	"regexp"
+	"time"
+)
 
 type Server struct {
 	Prefix  string          `yaml:"prefix"`  // 路由前缀
@@ -12,7 +15,14 @@ type Server struct {
 	Logger   Logger `yaml:"logger"`   // 日志配置
 	DumpBody bool   `yaml:"dumpBody"` // 请求日志 是否打印body
 
-	Acl Acl `yaml:"acl"`
+	Acl  Acl        `yaml:"acl"`
+	Auth AuthConfig `yaml:"auth"`
+}
+
+type AuthConfig struct {
+	CachePrefix string        `yaml:"cachePrefix"`
+	Duration    time.Duration `yaml:"duration"`
+	MaxDevices  int           `yaml:"maxDevices"`
 }
 
 type Logger struct {

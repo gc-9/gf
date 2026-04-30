@@ -10,6 +10,7 @@ import (
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/crud"
 	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/httplib"
 	"github.com/gc-9/gf/logger"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/types"
@@ -231,7 +232,7 @@ func (t *AdminService) GetAdminRolePermissions(uid int) (*adminTypes.Admin_R, er
 	return adminRole, nil
 }
 
-func (t *AdminService) MakeLogin(uid int) (string, error) {
+func (t *AdminService) MakeLogin(uid int, device string) (string, error) {
 	// check account
 	admin, err := t.GetAdminWithRoleId(uid)
 	if err != nil {
@@ -243,7 +244,7 @@ func (t *AdminService) MakeLogin(uid int) (string, error) {
 	if admin.RoleId == 0 {
 		return "", errors.New("该账号没有角色，请联系管理员")
 	}
-	return t.authService.MakeLogin(admin.ID, "")
+	return t.authService.MakeLogin(admin.ID, device)
 }
 
 func (t *AdminService) CheckToken(tokenStr string) (*adminTypes.Admin_RoleId, error) {
@@ -298,6 +299,10 @@ func getFallback[T any](client *redis.Client, key string, fk func() (*T, error),
 	return t, errors.Wrap(err, "redis Set failed")
 }
 
-func (t *AdminService) Logout(uid int) error {
-	return t.authService.Logout(uid, "")
+func (t *AdminService) Logout(ctx httplib.RequestContext) error {
+	tokenStr := ctx.Request().Header.Get(t.servConf.Acl.AuthHeader)
+	if tokenStr == "" {
+		return nil
+	}
+	return t.authService.LogoutByToken(tokenStr)
 }

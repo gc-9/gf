@@ -105,7 +105,7 @@ func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam
 	}
 
 	// token
-	token, err := p.adminService.MakeLogin(user.ID)
+	token, err := p.adminService.MakeLogin(user.ID, ctx.Request().UserAgent())
 	if err != nil {
 		return nil, err
 	}
@@ -152,8 +152,7 @@ func (p *PassportController) Logout(ctx httplib.RequestContext) error {
 	if ctx.AuthUser() == nil {
 		return nil
 	}
-	authUser := ctx.AuthUser().(*types.Admin_RoleId)
-	err := p.adminService.Logout(authUser.ID)
+	err := p.adminService.Logout(ctx)
 	if err != nil {
 		return err
 	}
