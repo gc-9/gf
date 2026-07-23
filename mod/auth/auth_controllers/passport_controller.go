@@ -9,6 +9,7 @@ import (
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/errors"
 	"github.com/gc-9/gf/httplib"
+	"github.com/gc-9/gf/logger"
 	"github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/util"
@@ -108,6 +109,11 @@ func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam
 	token, err := p.adminService.MakeLogin(user.ID, ctx.Request().UserAgent())
 	if err != nil {
 		return nil, err
+	}
+
+	err = p.adminService.CreateLoginLog(user.ID, role.ID, ctx.RealIP(), util.Substring(ctx.Request().UserAgent(), 0, 200))
+	if err != nil {
+		logger.Logger().Error(err)
 	}
 
 	data["token"] = token

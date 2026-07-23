@@ -149,6 +149,19 @@ func (t *AdminService) CreateLoginFailLog(uid int, ip string, userAgent string) 
 	return err
 }
 
+func (t *AdminService) CreateLoginLog(uid int, rid int, ip string, userAgent string) error {
+	_, err := t.db.Insert(&adminTypes.AdminLog{
+		Uid:       uid,
+		Rid:       rid,
+		Method:    "POST",
+		Action:    "login",
+		Ip:        ip,
+		UserAgent: userAgent,
+		Remark:    "登录",
+	})
+	return err
+}
+
 func (t *AdminService) Roles() ([]*adminTypes.AuthRole, error) {
 	var roles []*adminTypes.AuthRole
 	err := t.db.Cols("id", "name").OrderBy("id asc").Find(&roles)
