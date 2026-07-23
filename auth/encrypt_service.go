@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/errors"
@@ -19,11 +21,21 @@ func NewEncryptService(option *config.Crypto) (*EncryptService, error) {
 
 	return &EncryptService{
 		cipherBlock: cipherBlock,
+		key:         append([]byte(nil), option.Key...),
 	}, nil
 }
 
 type EncryptService struct {
 	cipherBlock cipher.Block
+	key         []byte
+}
+
+// DeriveHMACKey derives a stable, domain-separated HMAC key from the application crypto key.
+// Callers must use a unique scope for each protocol and credential.
+func (t *EncryptService) DeriveHMACKey(scope string) []byte {
+	mac := hmac.New(sha256.New, t.key)
+	_, _ = mac.Write([]byte(scope))
+	return mac.Sum(nil)
 }
 
 func (t *EncryptService) Encrypt(data []byte) []byte {
