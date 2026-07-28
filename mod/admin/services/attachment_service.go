@@ -13,7 +13,6 @@ import (
 	"github.com/gc-9/gf/errors"
 	"github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/storage"
-	"github.com/h2non/filetype"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/samber/lo"
 	"xorm.io/xorm"
@@ -65,27 +64,21 @@ func (t *AttachmentService) Store(uid int, fh *multipart.FileHeader) (*types.Att
 }
 
 func (t *AttachmentService) StoreTmp(fh *multipart.FileHeader, allowsExt []string) (*storage.FileInfo, error) {
+	return t.StoreTmpWithOptions(fh, allowsExt, false)
+}
+
+func (t *AttachmentService) StoreWithOptions(uid int, fh *multipart.FileHeader, convertHeicToJpg bool) (*types.AttachmentItem, error) {
+	return t.StorePathWithOptions(uid, fh, t.options.KeyTpl, nil, convertHeicToJpg)
+}
+
+func (t *AttachmentService) StoreTmpWithOptions(fh *multipart.FileHeader, allowsExt []string, convertHeicToJpg bool) (*storage.FileInfo, error) {
 	keyTpl := t.options.TmpKeyTpl
 
-	f, err := fh.Open()
+	f, closeFile, ext, _, err := PrepareUploadFile(fh, convertHeicToJpg)
 	if err != nil {
-		return nil, errors.Wrap(err, "fh.Open failed")
+		return nil, err
 	}
-
-	ext := strings.ToLower(strings.TrimLeft(path.Ext(fh.Filename), "."))
-	if ext == "" {
-		f2, err := fh.Open()
-		if err != nil {
-			return nil, errors.Wrap(err, "fh.Open failed")
-		}
-		defer f2.Close()
-		// get real type
-		kind, _ := filetype.MatchReader(f2)
-		if kind == filetype.Unknown {
-			return nil, errors.New("paramError_imageTypes")
-		}
-		ext = kind.Extension
-	}
+	defer closeFile()
 	if len(allowsExt) > 0 && !lo.Contains(allowsExt, ext) {
 		return nil, errors.New("paramError_imageTypes")
 	}
@@ -143,25 +136,15 @@ func (t *AttachmentService) CopyTmp2Normal(key string) (string, error) {
 }
 
 func (t *AttachmentService) StorePath(uid int, fh *multipart.FileHeader, keyTpl string, allowsExt []string) (*types.AttachmentItem, error) {
-	f, err := fh.Open()
-	if err != nil {
-		return nil, errors.Wrap(err, "fh.Open failed")
-	}
+	return t.StorePathWithOptions(uid, fh, keyTpl, allowsExt, false)
+}
 
-	ext := strings.ToLower(strings.TrimLeft(path.Ext(fh.Filename), "."))
-	if ext == "" {
-		f2, err := fh.Open()
-		if err != nil {
-			return nil, errors.Wrap(err, "fh.Open failed")
-		}
-		defer f2.Close()
-		// get real type
-		kind, _ := filetype.MatchReader(f2)
-		if kind == filetype.Unknown {
-			return nil, errors.New("paramError_imageTypes")
-		}
-		ext = kind.Extension
+func (t *AttachmentService) StorePathWithOptions(uid int, fh *multipart.FileHeader, keyTpl string, allowsExt []string, convertHeicToJpg bool) (*types.AttachmentItem, error) {
+	f, closeFile, ext, size, err := PrepareUploadFile(fh, convertHeicToJpg)
+	if err != nil {
+		return nil, err
 	}
+	defer closeFile()
 	if len(allowsExt) > 0 && !lo.Contains(allowsExt, ext) {
 		return nil, errors.New("paramError_imageTypes")
 	}
@@ -177,7 +160,7 @@ func (t *AttachmentService) StorePath(uid int, fh *multipart.FileHeader, keyTpl 
 		Path:     finfo.Path,
 		Driver:   t.storage.Name(),
 		Filename: fh.Filename,
-		Size:     int(fh.Size),
+		Size:     size,
 		Ext:      ext,
 	}
 	_, err = t.Create(m)

@@ -68,10 +68,11 @@ func (p *AttachmentController) Store(ctx httplib.RequestContext) (*adminTypes.At
 		return nil, errors.New("文件为空")
 	}
 
-	isTmp := ctx.FormValue("isTmp")
+	convertHeicToJpg := ctx.FormValue("convertHeic")
+	convertHeicToJpgEnabled := convertHeicToJpg == "1" || convertHeicToJpg == "true"
 	authUser := ctx.AuthUser().(*adminTypes.Admin_RoleId)
-	if isTmp != "" {
-		finfo, err := p.attachmentService.StoreTmp(fh, nil)
+	if ctx.FormValue("isTmp") != "" {
+		finfo, err := p.attachmentService.StoreTmpWithOptions(fh, nil, convertHeicToJpgEnabled)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +83,7 @@ func (p *AttachmentController) Store(ctx httplib.RequestContext) (*adminTypes.At
 		}
 		return &adminTypes.AttachmentItem{Attachment: m, Url: p.attachmentService.Url(m.Path)}, nil
 	}
-	return p.attachmentService.Store(authUser.ID, fh)
+	return p.attachmentService.StoreWithOptions(authUser.ID, fh, convertHeicToJpgEnabled)
 }
 
 type paramAttachmentDestroy struct {

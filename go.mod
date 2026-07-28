@@ -1,6 +1,6 @@
 module github.com/gc-9/gf
 
-go 1.21.6
+go 1.22
 
 require (
 	github.com/afocus/captcha v0.0.0-20191010092841-4bd1f21c8868
