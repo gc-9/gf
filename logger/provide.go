@@ -1,13 +1,15 @@
 package logger
 
 import (
+	"os"
+	"time"
+
+	"github.com/gc-9/gf/logger/wechat"
 	"github.com/gc-9/gf/telegram"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"os"
-	"time"
 )
 
 const zapCoreTags = `group:"zapCores"`
@@ -53,19 +55,27 @@ func InitLogger(cores []zapcore.Core) {
 	loggerNoCaller = logger.WithOptions(zap.WithCaller(false))
 }
 
-func NewTgBotLogCore(bot *telegram.Bot) zapcore.Core {
+func NewTgBotLogCore(bot *telegram.Bot, levelFilter func(zapcore.Level) bool) zapcore.Core {
 	botLogger := telegram.NewBotLogger(bot, 10)
 
 	cfg := defaultConfig()
 	cfg.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoder := zapcore.NewConsoleEncoder(cfg)
-	priority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool { return lvl >= zapcore.ErrorLevel })
+	priority := zap.LevelEnablerFunc(levelFilter)
 
 	core := zapcore.NewCore(encoder, zapcore.AddSync(botLogger), priority)
 	return core
 }
 
-func NewFileLogCore(filename string) zapcore.Core {
+// NewWeChatAlertCore creates a core that forwards Zap entries to the configured
+// WeChat template alert service. AlertLogger performs asynchronous delivery,
+// duplicate coalescing, and rate limiting.
+func NewWeChatAlertCore(client *wechat.Client, levelFilter func(zapcore.Level) bool) zapcore.Core {
+	return wechat.NewAlertCore(client, levelFilter)
+}
+
+// NewFileLogCore creates a rotating file core that records entries accepted by levelFilter.
+func NewFileLogCore(filename string, levelFilter func(zapcore.Level) bool) zapcore.Core {
 	l := &lumberjack.Logger{
 		Filename:   filename,
 		MaxSize:    500, // megabytes
@@ -76,7 +86,7 @@ func NewFileLogCore(filename string) zapcore.Core {
 
 	cfg := defaultConfig()
 	encoder := zapcore.NewConsoleEncoder(cfg)
-	priority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool { return lvl >= zapcore.DebugLevel })
+	priority := zap.LevelEnablerFunc(levelFilter)
 
 	core := zapcore.NewCore(encoder, w, priority)
 	return core
