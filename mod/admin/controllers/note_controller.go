@@ -38,7 +38,7 @@ func (p *NoteController) Index(param *types.ParamPageQuery) (*types.PagerData[*a
 func (p *NoteController) Show(param *types.ParamID) (*adminTypes.Note, error) {
 	item, err := p.crud.Get(param.ID)
 	if err == nil && item == nil {
-		err = errors.New("notFound")
+		err = errors.Public("notFound")
 	}
 	return item, nil
 }

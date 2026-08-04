@@ -65,7 +65,7 @@ func (p *aclPermissionController) Show(param *types.ParamID) (*adminTypes.AuthPe
 		return nil, err
 	}
 	if item == nil {
-		return nil, errors.New("notFound")
+		return nil, errors.Public("notFound")
 	}
 	return item, nil
 }

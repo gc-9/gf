@@ -84,31 +84,31 @@ func (t *AdminService) CreateAdmin(roleId int, admin *adminTypes.Admin) (*adminT
 
 	err := tx.Begin()
 	if err != nil {
-		return nil, errors.Wrap(err, "error")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 
 	exist, err := tx.Where("username=?", admin.Username).Exist(&adminTypes.Admin{})
 	if err != nil {
-		return nil, errors.Wrap(err, "error")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 	if exist {
-		return nil, errors.New("账号已存在")
+		return nil, errors.Public("账号已存在")
 	}
 
 	_, err = tx.Insert(admin)
 	if err != nil {
-		return nil, errors.Wrap(err, "error")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 
 	role := &adminTypes.AuthAdminRole{Rid: roleId, Uid: admin.ID}
 	_, err = tx.Insert(role)
 	if err != nil {
-		return nil, errors.Wrap(err, "error")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, errors.Wrap(err, "error")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 	return admin, err
 }
@@ -119,7 +119,7 @@ func (t *AdminService) CheckLoginFailTimes(uid int) (*time.Duration, error) {
 
 	c, err := t.db.Where("uid=? AND action=? AND created_at >= ?", uid, "login_fail", time.Now().Add(-duration)).Count(&adminTypes.AdminLog{})
 	if err != nil {
-		return nil, err
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 
 	if c > maxFailTimes {
@@ -127,7 +127,7 @@ func (t *AdminService) CheckLoginFailTimes(uid int) (*time.Duration, error) {
 		has, err := t.db.Where("uid=? AND action=? AND created_at >= ?", uid, "login_fail", time.Now().Add(-duration)).
 			OrderBy("id DESC").Get(&lastOne)
 		if err != nil {
-			return nil, err
+			return nil, errors.PublicWrap(err, "dbError")
 		}
 		if !has {
 			return nil, nil
@@ -146,7 +146,7 @@ func (t *AdminService) CreateLoginFailLog(uid int, ip string, userAgent string) 
 		Ip:        ip,
 		UserAgent: userAgent,
 	})
-	return err
+	return errors.PublicWrap(err, "dbError")
 }
 
 func (t *AdminService) CreateLoginLog(uid int, rid int, ip string, userAgent string) error {
@@ -159,14 +159,14 @@ func (t *AdminService) CreateLoginLog(uid int, rid int, ip string, userAgent str
 		UserAgent: userAgent,
 		Remark:    "登录",
 	})
-	return err
+	return errors.PublicWrap(err, "dbError")
 }
 
 func (t *AdminService) Roles() ([]*adminTypes.AuthRole, error) {
 	var roles []*adminTypes.AuthRole
 	err := t.db.Cols("id", "name").OrderBy("id asc").Find(&roles)
 	if err != nil {
-		return nil, errors.Wrap(err, "db Find AuthRole failed")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 	return roles, nil
 }
@@ -191,7 +191,7 @@ func (t *AdminService) GetRole(uid int) (*adminTypes.AuthRole, error) {
 
 func (t *AdminService) UpdateRole(uid int, roleId int) error {
 	_, err := t.db.Exec("update `auth_admin_role` set rid=? where uid=?", roleId, uid)
-	return errors.Wrap(err, "db exec failed")
+	return errors.PublicWrap(err, "dbError")
 }
 
 func (t *AdminService) GetPermissions(roleId int) ([]*adminTypes.AuthPermission, error) {
@@ -207,8 +207,9 @@ func (t *AdminService) IsHasPermission(roleId int, roleKey, method, path string)
 	if roleKey == t.servConf.Acl.SuperRoleKey {
 		return true, nil
 	}
-	return t.db.Where("pid in (select id from auth_permission where method=? and path=?)", method, path).
+	has, err := t.db.Where("pid in (select id from auth_permission where method=? and path=?)", method, path).
 		And("rid=? ", roleId).Exist(&adminTypes.RolePermission{})
+	return has, errors.PublicWrap(err, "dbError")
 }
 
 func (t *AdminService) GetAdminWithRoleId(uid int) (*adminTypes.Admin_RoleId, error) {
@@ -252,10 +253,10 @@ func (t *AdminService) MakeLogin(uid int, device string) (string, error) {
 		return "", err
 	}
 	if admin == nil {
-		return "", errors.New("账号不存在")
+		return "", errors.Public("账号不存在")
 	}
 	if admin.RoleId == 0 {
-		return "", errors.New("该账号没有角色，请联系管理员")
+		return "", errors.Public("该账号没有角色，请联系管理员")
 	}
 	return t.authService.MakeLogin(admin.ID, device)
 }

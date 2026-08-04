@@ -74,7 +74,7 @@ func (p *adminController) ShowSelf(ctx httplib.RequestContext) (map[string]inter
 		return nil, err
 	}
 	if admin == nil {
-		return nil, errors.New("notFound")
+		return nil, errors.Public("notFound")
 	}
 
 	// get role
@@ -83,7 +83,7 @@ func (p *adminController) ShowSelf(ctx httplib.RequestContext) (map[string]inter
 		return nil, err
 	}
 	if role == nil {
-		return nil, errors.New("该用户无任何权限")
+		return nil, errors.Public("该用户无任何权限")
 	}
 
 	return map[string]interface{}{
@@ -131,7 +131,7 @@ func (p *adminController) Store(ctx httplib.RequestContext, param *paramStore) (
 		return err
 	}
 	if role.ID != 1 {
-		return errors.New("非管理员不能创建和修改角色")
+		return errors.Public("非管理员不能创建和修改角色")
 	}
 
 	// store
@@ -150,7 +150,7 @@ func (p *adminController) Store(ctx httplib.RequestContext, param *paramStore) (
 			return
 		}
 		if param.Password == "" {
-			return errors.New("密码不能为空")
+			return errors.Public("密码不能为空")
 		}
 		_, err = p.adminService.CreateAdmin(param.RoleId, admin)
 		if err != nil {
@@ -162,7 +162,7 @@ func (p *adminController) Store(ctx httplib.RequestContext, param *paramStore) (
 			return err
 		}
 		if !has {
-			return errors.New("用户不存在")
+			return errors.Public("用户不存在")
 		}
 
 		// 不能修改自己的角色和状态

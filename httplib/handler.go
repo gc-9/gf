@@ -156,13 +156,13 @@ func ParseHandler(f interface{}) (*ParsedHandler, error) {
 	var outTypes []reflect.Type
 	// check out count
 	if numOut > 2 {
-		return nil, errors.WithStackf("handler %s return count need 0~2, got %d", funcName, numOut)
+		return nil, errors.WithStackf("handler %s return count need 0~2, got %d", fcName, numOut)
 	}
 	// check last out type must be error
 	if numOut > 0 {
 		oLast := t.Out(numOut - 1)
 		if oLast != errorType {
-			return nil, errors.WithStackf("handler %s last return need error type. got %s", funcName, oLast)
+			return nil, errors.WithStackf("handler %s last return need error type. got %s", fcName, oLast)
 		}
 
 		for i := 0; i < numOut; i++ {
@@ -173,21 +173,21 @@ func ParseHandler(f interface{}) (*ParsedHandler, error) {
 	var inTypes []reflect.Type
 	// check in count
 	if numIn > 2 {
-		return nil, errors.WithStackf("handler %s param count need 0~2, got %d", funcName, numIn)
+		return nil, errors.WithStackf("handler %s param count need 0~2, got %d", fcName, numIn)
 	}
 	// check in only 1 struct
 	if numIn == 2 {
 		in1 := t.In(0)
 		in2 := t.In(1)
 		if !isContextType(in1) && !isContextType(in2) {
-			return nil, errors.WithStackf("handler %s param support 1 struct. got 2 struct", funcName)
+			return nil, errors.WithStackf("handler %s param support 1 struct. got 2 struct", fcName)
 		}
 	}
 	for i := 0; i < numIn; i++ {
 		in := t.In(i)
 		// check in type
 		if !isStructType(in) && !isContextType(in) {
-			return nil, errors.WithStackf("handler %s param %d need struct or %s. got %s", funcName, i+1, contextType, in)
+			return nil, errors.WithStackf("handler %s param %d need struct or %s. got %s", fcName, i+1, contextType, in)
 		}
 		inTypes = append(inTypes, in)
 	}

@@ -67,7 +67,7 @@ func (t *Captcha2Service) Validate(id string, text string) (bool, error) {
 	v, _ := t.encryptService.Decrypt(tokenBuf)
 	group := strings.Split(string(v), "|")
 	if len(group) != 2 {
-		return false, errors.New("验证码已过期")
+		return false, errors.Public("验证码已过期")
 	}
 
 	beginTime, _ := strconv.Atoi(group[0])

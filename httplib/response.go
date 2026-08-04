@@ -1,17 +1,19 @@
 package httplib
 
 import (
-	"github.com/gc-9/gf/errors"
+	stdErrors "errors"
+	"net/http"
+	"strings"
+
+	appErrors "github.com/gc-9/gf/errors"
 	"github.com/gc-9/gf/logger"
 	"github.com/gc-9/gf/types"
 	"github.com/gc-9/gf/validator"
 	"github.com/labstack/echo/v4"
-	"net/http"
-	"strings"
 )
 
 type stackTracer interface {
-	StackTrace() errors.StackTrace
+	StackTrace() appErrors.StackTrace
 }
 
 func SendResponse(c echo.Context, data interface{}, err error) error {
@@ -19,8 +21,7 @@ func SendResponse(c echo.Context, data interface{}, err error) error {
 
 	if err != nil {
 		code := types.StatusCodeError
-
-		var humanMsg = ""
+		message := ctx.I18n("error")
 
 		switch e := err.(type) {
 		case *echo.HTTPError:
@@ -28,44 +29,37 @@ func SendResponse(c echo.Context, data interface{}, err error) error {
 				err = e.Internal
 			}
 		case validator.ValidationErrorsTranslations:
-			humanMsg = ctx.I18n("paramError") + ":" + e.Error()
+			message = ctx.I18n("paramError") + ":" + e.Error()
 		}
 
-		switch e := err.(type) {
-		case *errors.ErrMessage:
-			if e.Code > 0 {
-				code = e.Code
+		var appErr *appErrors.ErrMessage
+		if stdErrors.As(err, &appErr) {
+			if appErr.Code > 0 {
+				code = appErr.Code
 			}
-			humanMsg = e.HumanMsg
+			if appErr.Public {
+				message = appErr.Message
+			}
 		}
 
 		// log stackTracer error
 		if e2, ok := err.(stackTracer); ok {
 			st := e2.StackTrace()
-			if st != nil {
-				// stacktrace humanMsg always be error
-				if humanMsg == "" {
-					humanMsg = "error"
-				}
-				logger.NoCaller().Errorf("%s%+v", err, st[0:1])
+			if len(st) > 0 {
+				logger.NoCaller().Errorf("%s%+v", err, st)
 			}
 		}
 
-		if humanMsg == "" {
-			humanMsg = "error"
-		}
-
-		msg := humanMsg
 		if ctx.Config().App.Env != "online" {
 			debugMsg := err.Error()
-			if !strings.Contains(humanMsg, debugMsg) {
-				msg = ctx.I18n(humanMsg) + ", debug:" + debugMsg
+			if !strings.Contains(message, debugMsg) {
+				message = ctx.I18n(message) + ", debug:" + debugMsg
 			}
 		}
 
 		return ctx.JSON(
 			http.StatusOK,
-			&types.JsonResponse{Code: code, Message: ctx.I18n(msg), Data: data},
+			&types.JsonResponse{Code: code, Message: ctx.I18n(message), Data: data},
 		)
 	}
 

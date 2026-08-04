@@ -28,10 +28,7 @@ func UserAuth(userService *services.UserService, authService *auth.AuthService, 
 						return next(c)
 					}
 				}
-				err = &errors.ErrMessage{
-					Code:     types2.StatusCodeUnauthorized,
-					HumanMsg: "authError",
-				}
+				err = errors.Public("authError", errors.WithCode(types2.StatusCodeUnauthorized))
 				return http.SendResponse(c, nil, err)
 			}
 			c.Set("user", u)
@@ -62,10 +59,7 @@ func UserAdminAuth(adminService *auth_services.AdminService, servConf *config.Se
 				return httplib.SendResponse(c, nil, err)
 			}
 			if admin == nil {
-				return httplib.SendResponse(c, nil, &errors.ErrMessage{
-					Code:     types.StatusCodeUnauthorized,
-					HumanMsg: "authError",
-				})
+				return httplib.SendResponse(c, nil, errors.Public("authError", errors.WithCode(types.StatusCodeUnauthorized)))
 			}
 			c.Set("authUser", admin)
 			return next(c)

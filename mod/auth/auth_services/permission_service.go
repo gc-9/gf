@@ -29,13 +29,14 @@ func (t *PermissionService) Update(id int, permission *adminTypes.AuthPermission
 	for _, opFunc := range options {
 		opFunc(query)
 	}
-	return query.Update(permission)
+	updated, err := query.Update(permission)
+	return updated, errors.PublicWrap(err, "dbError")
 }
 
 func (t *PermissionService) All() ([]*adminTypes.AuthPermission, error) {
 	var items []*adminTypes.AuthPermission
 	err := t.db.OrderBy("`sort` asc, `path` asc").Find(&items)
-	return items, errors.Wrap(err, "db Find failed")
+	return items, errors.PublicWrap(err, "dbError")
 }
 
 func (t *PermissionService) StoreAll(permissions []*adminTypes.AuthPermission) error {
@@ -70,13 +71,13 @@ func (t *PermissionService) StoreAll(permissions []*adminTypes.AuthPermission) e
 	defer session.Close()
 
 	if err = session.Begin(); err != nil {
-		return errors.Wrap(err, "db begin failed")
+		return errors.PublicWrap(err, "dbError")
 	}
 
 	if len(newItems) > 0 {
 		if _, err = session.Insert(newItems); err != nil {
 			_ = session.Rollback()
-			return errors.Wrap(err, "db Insert failed")
+			return errors.PublicWrap(err, "dbError")
 		}
 	}
 
@@ -84,13 +85,13 @@ func (t *PermissionService) StoreAll(permissions []*adminTypes.AuthPermission) e
 		for _, item := range updatedItems {
 			if _, err = session.ID(item.ID).Cols("name").Update(item); err != nil {
 				_ = session.Rollback()
-				return errors.Wrap(err, "db Update failed")
+				return errors.PublicWrap(err, "dbError")
 			}
 		}
 	}
 
 	if err = session.Commit(); err != nil {
-		return errors.Wrap(err, "db Commit failed")
+		return errors.PublicWrap(err, "dbError")
 	}
 
 	return nil

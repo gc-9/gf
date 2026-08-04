@@ -118,7 +118,7 @@ func DeleteOptions[T any](db *xorm.Engine, options ...QueryOption) (int, error) 
 func CreateTX[T any](session *xorm.Session, t *T) (*T, error) {
 	_, err := session.Insert(t)
 	if err != nil {
-		return nil, errors.Wrap(err, "db Insert failed")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 	return t, err
 }
@@ -126,7 +126,7 @@ func CreateTX[T any](session *xorm.Session, t *T) (*T, error) {
 func CreatesTX[T any](session *xorm.Session, ts []*T) (int, error) {
 	c, err := session.Insert(ts)
 	if err != nil {
-		return 0, errors.Wrap(err, "db Insert failed")
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	return int(c), err
 }
@@ -139,7 +139,7 @@ func CountTX[T any](session *xorm.Session, options ...QueryOption) (int, error) 
 	}
 	c, err := session.Count(&t)
 	if err != nil {
-		return 0, errors.Wrap(err, "db Count failed")
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	return int(c), err
 }
@@ -148,7 +148,7 @@ func ExistTX[T any](session *xorm.Session, id int) (bool, error) {
 	var t T
 	b, err := session.ID(id).Exist(&t)
 	if err != nil {
-		return false, errors.Wrap(err, "db Exist failed")
+		return false, errors.PublicWrap(err, "dbError")
 	}
 	return b, err
 }
@@ -161,7 +161,7 @@ func ExistByOptionsTX[T any](session *xorm.Session, options ...QueryOption) (boo
 	}
 	b, err := session.Exist(&t)
 	if err != nil {
-		return false, errors.Wrap(err, "db Exist failed")
+		return false, errors.PublicWrap(err, "dbError")
 	}
 	return b, err
 }
@@ -175,7 +175,7 @@ func GetTX[T any](session *xorm.Session, id int, options ...QueryOption) (*T, er
 	}
 	has, err := session.Get(&t)
 	if err != nil || !has {
-		return nil, errors.Wrap(err, "db Get failed")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 	return &t, err
 }
@@ -188,7 +188,7 @@ func GetByOptionsTX[T any](session *xorm.Session, options ...QueryOption) (*T, e
 	}
 	has, err := session.Get(&t)
 	if err != nil || !has {
-		return nil, errors.Wrap(err, "db Get failed")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 	return &t, err
 }
@@ -203,7 +203,7 @@ func ListTX[T any](session *xorm.Session, options ...QueryOption) ([]*T, error) 
 	var items []*T
 	err := session.Find(&items)
 	if err != nil {
-		return nil, errors.Wrap(err, "db FindAndCount failed")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 
 	return items, nil
@@ -220,7 +220,7 @@ func PagerDataTX[T any](session *xorm.Session, pager *types.ParamPager, options 
 	var items []*T
 	c, err := session.FindAndCount(&items)
 	if err != nil {
-		return nil, errors.Wrap(err, "db FindAndCount failed")
+		return nil, errors.PublicWrap(err, "dbError")
 	}
 
 	pagerData := &types.PagerData[*T]{List: items}
@@ -240,7 +240,7 @@ func UpdateTX[T any](session *xorm.Session, id int, up interface{}, options ...Q
 	var t T
 	c, err := session.Table(&t).Update(up)
 	if err != nil {
-		return 0, errors.Wrap(err, "db Update failed")
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	return int(c), err
 }
@@ -252,7 +252,7 @@ func UpdateByOptionsTX[T any](session *xorm.Session, up any, options ...QueryOpt
 	var t T
 	c, err := session.Table(&t).Update(up)
 	if err != nil {
-		return 0, errors.Wrap(err, "db Update failed")
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	return int(c), err
 }
@@ -261,7 +261,7 @@ func DeleteTX[T any](session *xorm.Session, id int) (int, error) {
 	var t T
 	c, err := session.ID(id).Delete(&t)
 	if err != nil {
-		return 0, errors.Wrap(err, "db Delete failed")
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	return int(c), err
 }
@@ -273,7 +273,7 @@ func DeleteOptionsTX[T any](session *xorm.Session, options ...QueryOption) (int,
 	}
 	c, err := session.Delete(&t)
 	if err != nil {
-		return 0, errors.Wrap(err, "db Delete failed")
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	return int(c), err
 }

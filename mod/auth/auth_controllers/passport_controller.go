@@ -1,6 +1,7 @@
 package auth_controllers
 
 import (
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -52,7 +53,7 @@ func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam
 		return nil, err
 	}
 	if !ok {
-		return nil, errors.New("验证码错误")
+		return nil, errors.Public("验证码错误")
 	}
 
 	var user *types.Admin
@@ -61,7 +62,7 @@ func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam
 		return nil, err
 	}
 	if user == nil {
-		return nil, errors.New("用户名或密码错误")
+		return nil, errors.Public("用户名或密码错误")
 	}
 
 	// 检查错误次数
@@ -70,26 +71,26 @@ func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam
 		return nil, err
 	}
 	if dueTime != nil {
-		return nil, errors.Errorf("错误次数过多，%.0f分钟后再试", math.Ceil(dueTime.Minutes()))
+		return nil, errors.Public(fmt.Sprintf("错误次数过多，%.0f分钟后再试", math.Ceil(dueTime.Minutes())))
 	}
 
 	if !auth.CompareHashAndPassword(user.Password, param.Password) {
 		_ = p.adminService.CreateLoginFailLog(user.ID, ctx.RealIP(), util.Substring(ctx.Request().UserAgent(), 0, 200))
-		return nil, errors.New("用户名或密码错误")
+		return nil, errors.Public("用户名或密码错误")
 	}
 
 	// check status
 	if user.Status <= 0 {
-		return nil, errors.New("用户已禁用")
+		return nil, errors.Public("用户已禁用")
 	}
 
 	// get role
 	role, err := p.adminService.GetRole(user.ID)
 	if err != nil {
-		return nil, errors.Wrap(err, "GetRole failed")
+		return nil, errors.EnsurePublic(err, "操作失败，请稍后重试")
 	}
 	if role == nil {
-		return nil, errors.New("该用户无任何权限")
+		return nil, errors.Public("该用户无任何权限")
 	}
 
 	// data
@@ -130,7 +131,7 @@ func (p *PassportController) User(ctx httplib.RequestContext) (map[string]interf
 		return nil, err
 	}
 	if admin.Role == nil {
-		return nil, errors.New("该用户无任何权限")
+		return nil, errors.Public("该用户无任何权限")
 	}
 
 	var data = map[string]interface{}{}

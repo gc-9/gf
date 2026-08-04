@@ -1,10 +1,11 @@
 package httplib
 
 import (
+	"net/http"
+
 	"github.com/gc-9/gf/i18n"
 	"github.com/gc-9/gf/types"
 	"github.com/labstack/echo/v4"
-	"net/http"
 )
 
 func HandlerDefaultHTTPError(i18n i18n.I18n) echo.HTTPErrorHandler {
@@ -25,29 +26,30 @@ func HandlerDefaultHTTPError(i18n i18n.I18n) echo.HTTPErrorHandler {
 			return
 		}
 
-		msg := ""
+		message := ""
 		if he, ok := err.(*echo.HTTPError); ok {
 			if he.Internal != nil {
 				if herr, ok := he.Internal.(*echo.HTTPError); ok {
 					he = herr
 				}
 			}
-			if he.Code == http.StatusNotFound {
+			switch he.Code {
+			case http.StatusNotFound:
 				httpStatus = http.StatusNotFound
 				code = types.StatusCodeNotFound
-				msg = he.Error()
-			} else if he.Code == http.StatusMethodNotAllowed {
+				message = he.Error()
+			case http.StatusMethodNotAllowed:
 				httpStatus = http.StatusNotFound
 				code = types.StatusCodeNotFound
-				msg = he.Error()
+				message = he.Error()
 			}
 		}
-		if msg == "" {
-			msg = i18n.T(GetLocale(c), "error")
+		if message == "" {
+			message = i18n.T(GetLocale(c), "error")
 		}
 		_ = c.JSON(
 			httpStatus,
-			&types.JsonResponse{Code: code, Message: msg},
+			&types.JsonResponse{Code: code, Message: message},
 		)
 	}
 }

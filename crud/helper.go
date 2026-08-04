@@ -16,11 +16,11 @@ func ExecMustEffect(db *xorm.Engine, args ...interface{}) (int64, error) {
 func ExecMustEffectTx(tx *xorm.Session, args ...interface{}) (int64, error) {
 	result, err := tx.Exec(args...)
 	if err != nil {
-		return 0, err
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	c, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "db RowsAffected failed")
+		return 0, errors.PublicWrap(err, "dbError")
 	}
 	if c <= 0 {
 		return 0, errors.WithStack("db no RowsAffected")

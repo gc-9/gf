@@ -80,7 +80,7 @@ func (t *AttachmentService) StoreTmpWithOptions(fh *multipart.FileHeader, allows
 	}
 	defer closeFile()
 	if len(allowsExt) > 0 && !lo.Contains(allowsExt, ext) {
-		return nil, errors.New("paramError_imageTypes")
+		return nil, errors.Public("paramError_imageTypes")
 	}
 
 	key := t.GeneratePathByTpl(keyTpl, ext)
@@ -146,7 +146,7 @@ func (t *AttachmentService) StorePathWithOptions(uid int, fh *multipart.FileHead
 	}
 	defer closeFile()
 	if len(allowsExt) > 0 && !lo.Contains(allowsExt, ext) {
-		return nil, errors.New("paramError_imageTypes")
+		return nil, errors.Public("paramError_imageTypes")
 	}
 
 	key := t.GeneratePathByTpl(keyTpl, ext)

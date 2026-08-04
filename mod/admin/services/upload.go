@@ -32,7 +32,7 @@ func ResolveUploadExtReader(filename string, reader io.Reader, forceReadRealType
 
 	kind, _ := filetype.Match(header)
 	if kind == filetype.Unknown {
-		return "", nil, errors.New("文件类型错误")
+		return "", nil, errors.Public("文件类型错误")
 	}
 	return kind.Extension, io.MultiReader(bytes.NewReader(header), reader), nil
 }

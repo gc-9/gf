@@ -23,7 +23,8 @@ type ConfigService struct {
 
 func (t *ConfigService) SetValue(key string, value string) (int64, error) {
 	// update
-	return t.db.Where("`key`=?", key).Cols("value").Update(&types.Config{Value: value})
+	updated, err := t.db.Where("`key`=?", key).Cols("value").Update(&types.Config{Value: value})
+	return updated, errors.PublicWrap(err, "dbError")
 }
 
 func (t *ConfigService) GetValue(key string) (string, error) {

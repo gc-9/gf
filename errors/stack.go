@@ -11,6 +11,21 @@ import (
 	"strings"
 )
 
+// DefaultStackDepth is the number of frames captured for a newly wrapped error.
+const DefaultStackDepth = 2
+
+var stackDepth = DefaultStackDepth
+
+// SetStackDepth configures how many stack frames newly created errors capture.
+// Call it during application startup, before handling concurrent requests.
+// It panics when depth is less than 1.
+func SetStackDepth(depth int) {
+	if depth < 1 {
+		panic("errors: stack depth must be greater than zero")
+	}
+	stackDepth = depth
+}
+
 // Frame represents a program counter inside a stack frame.
 // For historical reasons if Frame is interpreted as a uintptr
 // its value represents the program counter + 1.
@@ -162,11 +177,11 @@ func (s *stack) StackTrace() StackTrace {
 	return f
 }
 
-func callers() *stack {
-	const depth = 2 // todo only 1 depth? i think enough
-	var pcs [depth]uintptr
-	n := runtime.Callers(3, pcs[:])
-	var st stack = pcs[0:n]
+func callers(skip int) *stack {
+	depth := stackDepth
+	pcs := make([]uintptr, depth)
+	n := runtime.Callers(skip, pcs)
+	var st stack = pcs[:n]
 	return &st
 }
 

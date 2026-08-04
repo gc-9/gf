@@ -37,16 +37,16 @@ func (s *RoleService) GetPermissions(rolId int) ([]*types.AuthPermission, error)
 
 func (s *RoleService) Store(param *types.ParamAclRoleStore) error {
 	if param.Key == s.servConf.Acl.SuperRoleKey {
-		return errors.New("系统角色不能添加或修改")
+		return errors.Public("系统角色不能添加或修改")
 	}
 
 	// check param permissions
 	count, err := s.db.In("id", param.Permissions).Count(&types.AuthPermission{})
 	if err != nil {
-		return errors.Wrap(err, "Count failed")
+		return errors.PublicWrap(err, "dbError")
 	}
 	if int(count) != len(param.Permissions) {
-		return errors.New("权限列表错误")
+		return errors.Public("权限列表错误")
 	}
 
 	// store
@@ -59,7 +59,7 @@ func (s *RoleService) Store(param *types.ParamAclRoleStore) error {
 	tx := s.db.NewSession()
 	err = tx.Begin()
 	if err != nil {
-		return errors.Wrap(err, "db tx.Begin failed")
+		return errors.PublicWrap(err, "dbError")
 	}
 
 	roleTX := s.TX(tx)
@@ -73,7 +73,7 @@ func (s *RoleService) Store(param *types.ParamAclRoleStore) error {
 		_, err = roleTX.Update(param.ID, &up)
 	}
 	if err != nil {
-		return errors.Wrap(err, "db Insert/Update failed")
+		return errors.EnsurePublic(err, "dbError")
 	}
 
 	// store permissions
@@ -113,21 +113,21 @@ func (s *RoleService) Store(param *types.ParamAclRoleStore) error {
 			query.Where("rid = ?", roleId).NotIn("pid", param.Permissions)
 		})
 		if err != nil {
-			return errors.Wrap(err, "db Delete failed")
+			return errors.EnsurePublic(err, "dbError")
 		}
 
 		// add
 		if len(inserts) > 0 {
 			_, err = permissionTx.Creates(inserts)
 			if err != nil {
-				return errors.Wrap(err, "db Insert failed")
+				return errors.EnsurePublic(err, "dbError")
 			}
 		}
 
 	}
 
 	err = tx.Commit()
-	return errors.Wrap(err, "db tx.Commit failed")
+	return errors.PublicWrap(err, "dbError")
 }
 
 func (s *RoleService) Clone(id int) error {
@@ -136,7 +136,7 @@ func (s *RoleService) Clone(id int) error {
 		return err
 	}
 	if item == nil {
-		return errors.New("notFound")
+		return errors.Public("notFound")
 	}
 
 	ps, err := s.GetPermissions(id)

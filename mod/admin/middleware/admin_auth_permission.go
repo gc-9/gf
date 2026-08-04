@@ -1,14 +1,15 @@
 package middleware
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/gc-9/gf/errors"
 	"github.com/gc-9/gf/httplib"
 	adminTypes "github.com/gc-9/gf/mod/admin/types"
 	"github.com/gc-9/gf/mod/auth/auth_services"
 	"github.com/gc-9/gf/types"
 	"github.com/labstack/echo/v4"
-	"regexp"
-	"strings"
 )
 
 func AdminAuthPermission(prefix string, adminService *auth_services.AdminService, ignorePaths []*regexp.Regexp) echo.MiddlewareFunc {
@@ -34,10 +35,7 @@ func AdminAuthPermission(prefix string, adminService *auth_services.AdminService
 				return httplib.SendResponse(c, nil, err)
 			}
 			if !ok {
-				return httplib.SendResponse(c, nil, &errors.ErrMessage{
-					Code:     types.StatusCodeNoPermission,
-					HumanMsg: "noPermission",
-				})
+				return httplib.SendResponse(c, nil, errors.Public("noPermission", errors.WithCode(types.StatusCodeNoPermission)))
 			}
 			return next(c)
 		}

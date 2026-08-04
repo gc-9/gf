@@ -65,7 +65,7 @@ func (p *AttachmentController) Index(param *types.ParamPageQuery) (*types.PagerD
 func (p *AttachmentController) Store(ctx httplib.RequestContext) (*adminTypes.AttachmentItem, error) {
 	fh, err := ctx.FormFile("filedata")
 	if err != nil {
-		return nil, errors.New("文件为空")
+		return nil, errors.Public("文件为空")
 	}
 
 	convertHeicToJpg := ctx.FormValue("convertHeic")

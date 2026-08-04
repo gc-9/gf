@@ -61,7 +61,7 @@ func (p *roleController) Show(param *types.ParamID) (*adminTypes.AclRole_Permiss
 		return nil, err
 	}
 	if item == nil {
-		return nil, errors.New("notFound")
+		return nil, errors.Public("notFound")
 	}
 
 	ps, err := p.roleService.GetPermissions(param.ID)
