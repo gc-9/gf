@@ -16,6 +16,7 @@ type Core struct {
 }
 
 func NewCore(client *Client, labels Labels, level zapcore.LevelEnabler) *Core {
+	_, labels = labels.canonical()
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 	encoderConfig.EncodeDuration = zapcore.MillisDurationEncoder

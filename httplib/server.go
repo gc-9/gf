@@ -37,6 +37,9 @@ func NewServer(params newServerParams) (*echo.Echo, error) {
 }
 
 func newServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server, lokiClient *loki.Client) (*echo.Echo, error) {
+	if err := servConf.RequestLog.Compile(); err != nil {
+		return nil, err
+	}
 
 	// Echo instance
 	e := echo.New()
@@ -68,13 +71,14 @@ func newServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server, lok
 	e.Logger.SetHeader(`time_rfc3339_nano ${level} ${short_file}:${line}`)
 
 	requestLabels := loki.Labels{
-		"app":    conf.App.Name,
-		"env":    conf.App.Env,
-		"source": "request",
+		"app":     conf.App.Name,
+		"service": servConf.Name,
+		"env":     conf.App.Env,
+		"source":  "request",
 	}
 
 	// request log
-	if servConf.DumpBody {
+	if servConf.RequestLog.DumpBody {
 		requestLogger := logger.RequestNoCaller()
 		const maxDumpLength = 500
 		e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -135,8 +139,10 @@ func newServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server, lok
 					args = append(args, resDump)
 				}
 
-				pushRequestLog(lokiClient, requestLabels, req, res.Status, c.RealIP(), latency, err, reqDump, resDump)
-				requestLogger.Debugf(tpl, args...)
+				if servConf.RequestLog.ShouldLog(req.URL.Path, res.Status, err) {
+					pushRequestLog(lokiClient, requestLabels, req, res.Status, c.RealIP(), latency, err, reqDump, resDump)
+					requestLogger.Debugf(tpl, args...)
+				}
 				return
 			}
 
@@ -151,11 +157,14 @@ func newServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server, lok
 			LogLatency:  true,
 			LogError:    true,
 			LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-				pushRequestLog(lokiClient, requestLabels, c.Request(), v.Status, v.RemoteIP, v.Latency, v.Error, "", "")
-				if v.Error != nil {
-					requestLogger.Debugf("[request] %v %v %v %v %v err:%v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency, v.Error)
-				} else {
-					requestLogger.Debugf("[request] %v %v %v %v %v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency)
+				request := c.Request()
+				if servConf.RequestLog.ShouldLog(request.URL.Path, v.Status, v.Error) {
+					pushRequestLog(lokiClient, requestLabels, request, v.Status, v.RemoteIP, v.Latency, v.Error, "", "")
+					if v.Error != nil {
+						requestLogger.Debugf("[request] %v %v %v %v %v err:%v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency, v.Error)
+					} else {
+						requestLogger.Debugf("[request] %v %v %v %v %v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency)
+					}
 				}
 				return nil
 			},

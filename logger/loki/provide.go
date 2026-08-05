@@ -28,13 +28,20 @@ func ProvideClient(lc fx.Lifecycle, conf *config.Config) (*Client, error) {
 	return client, nil
 }
 
-// ProvideCore creates the regular application-log Loki core. logger.InitLogger
-// keeps this concrete core out of its separate request logger.
-func ProvideCore(client *Client, conf *config.Config, levelFilter func(zapcore.Level) bool) zapcore.Core {
-	labels := Labels{
-		"app":    conf.App.Name,
-		"env":    conf.App.Env,
-		"source": "log",
-	}
+// ProvideCore creates a Loki Zap core using the complete label set supplied
+// by the caller. logger.InitLogger keeps this concrete core out of its
+// separate request logger.
+//
+// Example:
+//
+//	labels := loki.Labels{
+//		"app":     conf.App.Name,
+//		"env":     conf.App.Env,
+//		"source":  "log",
+//	}
+//	core := loki.ProvideCore(client, labels, func(level zapcore.Level) bool {
+//		return level >= zapcore.InfoLevel
+//	})
+func ProvideCore(client *Client, labels Labels, levelFilter func(zapcore.Level) bool) zapcore.Core {
 	return NewCore(client, labels, zap.LevelEnablerFunc(levelFilter))
 }
