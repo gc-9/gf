@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	appErrors "github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/logger"
 	"github.com/gc-9/gf/types"
 	"github.com/gc-9/gf/validator"
 	"github.com/labstack/echo/v4"
@@ -46,7 +45,7 @@ func SendResponse(c echo.Context, data interface{}, err error) error {
 		if e2, ok := err.(stackTracer); ok {
 			st := e2.StackTrace()
 			if len(st) > 0 {
-				logger.NoCaller().Errorf("%s%+v", err, st)
+				ctx.Log().Errorf("%s%+v", err, st)
 			}
 		}
 

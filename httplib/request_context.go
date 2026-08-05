@@ -3,13 +3,17 @@ package httplib
 import (
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/i18n"
+	"github.com/gc-9/gf/logger"
 	"github.com/gc-9/gf/validator"
 	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 	"golang.org/x/text/language"
 	"sync"
 )
 
 var poolContext = sync.Pool{}
+
+const RequestIDHeader = "X-Request-Id"
 
 func init() {
 	poolContext.New = func() any {
@@ -22,6 +26,8 @@ type RequestContext interface {
 	GetLocale() string
 	I18n(key string) string
 	Config() *config.Config
+	RequestID() string
+	Log() *zap.SugaredLogger
 
 	AuthUser() any
 }
@@ -32,12 +38,23 @@ func ContextPoolGet(c echo.Context, conf *config.Config, i18b i18n.I18n, validat
 	ctx.i18n = i18b
 	ctx.config = conf
 	ctx.validator = validator
+	ctx.requestID = c.Request().Header.Get(RequestIDHeader)
+	if ctx.requestID == "" {
+		ctx.log = logger.Logger()
+	} else {
+		ctx.log = logger.Logger().With("request_id", ctx.requestID)
+	}
 	return ctx
 }
 
 func ContextPoolRelease(cc RequestContext) {
-	// reset
 	ctx := cc.(*CommonRequestContext)
+	ctx.Context = nil
+	ctx.i18n = nil
+	ctx.config = nil
+	ctx.validator = nil
+	ctx.requestID = ""
+	ctx.log = nil
 	poolContext.Put(ctx)
 }
 
@@ -46,10 +63,23 @@ type CommonRequestContext struct {
 	i18n      i18n.I18n
 	config    *config.Config
 	validator *validator.DataValidator
+	requestID string
+	log       *zap.SugaredLogger
 }
 
 func (c *CommonRequestContext) Config() *config.Config {
 	return c.config
+}
+
+func (c *CommonRequestContext) RequestID() string {
+	return c.requestID
+}
+
+// Log returns a request-scoped Zap logger carrying request_id when Nginx
+// supplied X-Request-Id. It intentionally does not use Logger(), which is
+// already defined by echo.Context with a different logger type.
+func (c *CommonRequestContext) Log() *zap.SugaredLogger {
+	return c.log
 }
 
 // GetLocale language subtags @see BCP 47 https://en.wikipedia.org/wiki/IETF_language_tag

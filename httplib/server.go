@@ -207,6 +207,9 @@ func pushRequestLog(client *loki.Client, labels loki.Labels, req *http.Request, 
 		"latency_ms": float64(latency) / float64(time.Millisecond),
 		"remote_ip":  remoteIP,
 	}
+	if requestID := req.Header.Get(RequestIDHeader); requestID != "" {
+		line["request_id"] = requestID
+	}
 	if requestErr != nil {
 		line["error"] = requestErr.Error()
 	}
