@@ -3,6 +3,8 @@ package config
 import (
 	"regexp"
 	"time"
+
+	"go.uber.org/zap/zapcore"
 )
 
 type Server struct {
@@ -26,7 +28,11 @@ type AuthConfig struct {
 }
 
 type Logger struct {
-	Path string `yaml:"path"`
+	Path       string        `yaml:"path"`
+	Level      zapcore.Level `yaml:"level"`
+	MaxSize    int           `yaml:"maxSize"`
+	MaxBackups int           `yaml:"maxBackups"`
+	MaxAge     int           `yaml:"maxAge"`
 }
 
 type ServerStatic struct {

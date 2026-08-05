@@ -16,7 +16,7 @@ import (
 
 const (
 	defaultAPIBaseURL = "https://api.weixin.qq.com"
-	httpTimeout       = 10 * time.Second
+	httpTimeout       = 5 * time.Second
 	tokenRefreshAhead = 5 * time.Minute
 	alertDataMaxRunes = 100
 )

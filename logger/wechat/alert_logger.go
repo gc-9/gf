@@ -46,9 +46,9 @@ type alert struct {
 	count int
 }
 
-// NewAlertCore creates a Zap core that receives the original entries instead
-// of parsing an already encoded log line.
-func NewAlertCore(client *Client, levelFilter func(zapcore.Level) bool) zapcore.Core {
+// NewWeChatAlertCore creates a Zap core that receives the original entries
+// instead of parsing an already encoded log line.
+func NewWeChatAlertCore(client *Client, levelFilter func(zapcore.Level) bool) zapcore.Core {
 	return &alertCore{
 		logger:      NewAlertLogger(client),
 		levelFilter: levelFilter,
