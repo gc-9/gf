@@ -3,14 +3,15 @@ package config
 import (
 	"flag"
 	"fmt"
-	"github.com/gc-9/gf/errors"
-	"github.com/gc-9/gf/i18n"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
 	"path"
 	"regexp"
 	"time"
+
+	"github.com/gc-9/gf/errors"
+	"github.com/gc-9/gf/i18n"
+	"gopkg.in/yaml.v3"
 )
 
 // log setting

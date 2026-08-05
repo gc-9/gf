@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gc-9/gf/logger/loki"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -32,24 +33,23 @@ func InvokeInitLogger() fx.Option {
 }
 
 func InitLogger(cores []zapcore.Core) {
-	var tmp []zapcore.Core
+	var allCores []zapcore.Core
+	var requestCores []zapcore.Core
 	for _, v := range cores {
 		if v == nil {
 			continue
 		}
-		tmp = append(tmp, v)
+		allCores = append(allCores, v)
+		if _, isLokiCore := v.(*loki.Core); !isLokiCore {
+			requestCores = append(requestCores, v)
+		}
 	}
-	cores = tmp
-	if len(cores) == 0 {
+	if len(allCores) == 0 {
 		return
 	}
 
-	core := zapcore.NewTee(
-		cores...,
-	)
-	lg := zap.New(core, zap.WithCaller(true))
-	logger = lg.Sugar()
-	loggerNoCaller = logger.WithOptions(zap.WithCaller(false))
+	logger, loggerNoCaller = newSugaredLogger(allCores)
+	requestLogger, requestLoggerNoCaller = newSugaredLogger(requestCores)
 }
 
 func NewConsoleCore() zapcore.Core {

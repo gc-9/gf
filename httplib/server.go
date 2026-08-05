@@ -3,21 +3,40 @@ package httplib
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/i18n"
 	"github.com/gc-9/gf/logger"
+	"github.com/gc-9/gf/logger/loki"
 	"github.com/gc-9/gf/util"
 	"github.com/gc-9/gf/util/http_util"
 	"github.com/gc-9/gf/validator"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/fx"
-	"io"
-	"strings"
-	"time"
 )
 
-func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*echo.Echo, error) {
+type newServerParams struct {
+	fx.In
+
+	Conf       *config.Config
+	I18n       i18n.I18n
+	Server     *config.Server
+	LokiClient *loki.Client `optional:"true"`
+}
+
+// NewServer is the Fx constructor. LokiClient is an optional dependency, so
+// the server works with or without loki.ProvideClient.
+func NewServer(params newServerParams) (*echo.Echo, error) {
+	return newServer(params.Conf, params.I18n, params.Server, params.LokiClient)
+}
+
+func newServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server, lokiClient *loki.Client) (*echo.Echo, error) {
 
 	// Echo instance
 	e := echo.New()
@@ -48,9 +67,15 @@ func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*e
 	// logger format
 	e.Logger.SetHeader(`time_rfc3339_nano ${level} ${short_file}:${line}`)
 
+	requestLabels := loki.Labels{
+		"app":    conf.App.Name,
+		"env":    conf.App.Env,
+		"source": "request",
+	}
+
 	// request log
 	if servConf.DumpBody {
-		noCaller := logger.NoCaller()
+		requestLogger := logger.RequestNoCaller()
 		const maxDumpLength = 500
 		e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 
@@ -94,11 +119,12 @@ func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*e
 				if strings.HasPrefix(resContentType, echo.MIMEApplicationJSON) {
 					resDump = string(util.SubUtf8Bytes(resBody.Bytes(), maxDumpLength))
 				} else {
-					reqDump = resContentType + "\n--no dump-- "
+					resDump = resContentType + "\n--no dump-- "
 				}
 
+				latency := time.Since(start)
 				tpl := "[request] %v %v %v %v %v"
-				args := []any{c.RealIP(), req.Method, req.URL, res.Status, time.Now().Sub(start)}
+				args := []any{c.RealIP(), req.Method, req.URL, res.Status, latency}
 
 				if reqDump != "" {
 					tpl = tpl + "\n[payload]\n%v"
@@ -109,13 +135,14 @@ func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*e
 					args = append(args, resDump)
 				}
 
-				noCaller.Debugf(tpl, args...)
+				pushRequestLog(lokiClient, requestLabels, req, res.Status, c.RealIP(), latency, err, reqDump, resDump)
+				requestLogger.Debugf(tpl, args...)
 				return
 			}
 
 		})
 	} else {
-		noCaller := logger.NoCaller()
+		requestLogger := logger.RequestNoCaller()
 		e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 			LogURI:      true,
 			LogStatus:   true,
@@ -124,10 +151,11 @@ func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*e
 			LogLatency:  true,
 			LogError:    true,
 			LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+				pushRequestLog(lokiClient, requestLabels, c.Request(), v.Status, v.RemoteIP, v.Latency, v.Error, "", "")
 				if v.Error != nil {
-					noCaller.Debugf("[request] %v %v %v %v %v err:%v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency, v.Error)
+					requestLogger.Debugf("[request] %v %v %v %v %v err:%v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency, v.Error)
 				} else {
-					noCaller.Debugf("[request] %v %v %v %v %v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency)
+					requestLogger.Debugf("[request] %v %v %v %v %v", v.RemoteIP, v.Method, v.URI, v.Status, v.Latency)
 				}
 				return nil
 			},
@@ -151,6 +179,38 @@ func NewServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server) (*e
 	}))
 
 	return e, nil
+}
+
+func pushRequestLog(client *loki.Client, labels loki.Labels, req *http.Request, status int, remoteIP string, latency time.Duration, requestErr error, requestBody, responseBody string) {
+	if client == nil || !client.Enabled() {
+		return
+	}
+
+	level := "debug"
+	if requestErr != nil || status >= http.StatusInternalServerError {
+		level = "error"
+	}
+	line := map[string]any{
+		"level":      level,
+		"method":     req.Method,
+		"path":       req.URL.Path,
+		"status":     status,
+		"latency_ms": float64(latency) / float64(time.Millisecond),
+		"remote_ip":  remoteIP,
+	}
+	if requestErr != nil {
+		line["error"] = requestErr.Error()
+	}
+	if requestBody != "" {
+		line["request_body"] = requestBody
+	}
+	if responseBody != "" {
+		line["response_body"] = responseBody
+	}
+	encoded, err := json.Marshal(line)
+	if err == nil {
+		client.Push(labels, time.Now(), encoded)
+	}
 }
 
 func StartServer(lc fx.Lifecycle, conf *config.Server, srv *echo.Echo) {
