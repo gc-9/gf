@@ -29,13 +29,13 @@ func TestWrapCapturesOnlyOneStack(t *testing.T) {
 }
 
 func TestPublicOptionsAndWrap(t *testing.T) {
-	public := Public("notFound", WithCode(404)).(*ErrMessage)
-	if !public.Public || public.Message != "notFound" || public.Code != 404 {
+	public := Public("notFound", WithCode(404), WithInternalCode(1001)).(*ErrMessage)
+	if !public.Public || public.Message != "notFound" || public.Code != 404 || public.InternalCode != 1001 {
 		t.Fatalf("unexpected public error: %#v", public)
 	}
 
-	wrapped := PublicWrap(stdErrors.New("write failed"), "文件保存失败").(*ErrMessage)
-	if !wrapped.Public || wrapped.Cause == nil || wrapped.Stack == nil {
+	wrapped := PublicWrap(stdErrors.New("write failed"), "文件保存失败", WithInternalCode(2001)).(*ErrMessage)
+	if !wrapped.Public || wrapped.Cause == nil || wrapped.Stack == nil || wrapped.InternalCode != 2001 {
 		t.Fatalf("unexpected public wrapped error: %#v", wrapped)
 	}
 	if got := fmt.Sprintf("%+v", Public("safe message")); got != "safe message" {

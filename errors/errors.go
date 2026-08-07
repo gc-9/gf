@@ -7,11 +7,12 @@ import (
 )
 
 type ErrMessage struct {
-	Code    int
-	Public  bool
-	Message string
-	Cause   error
-	Stack   *stack
+	Code         int
+	InternalCode int
+	Public       bool
+	Message      string
+	Cause        error
+	Stack        *stack
 }
 
 // Option configures an ErrMessage created by a public error constructor.
@@ -21,6 +22,14 @@ type Option func(*ErrMessage)
 func WithCode(code int) Option {
 	return func(err *ErrMessage) {
 		err.Code = code
+	}
+}
+
+// WithInternalCode assigns an internal-only code for diagnostics and handling
+// during error propagation. It does not affect the public response code.
+func WithInternalCode(code int) Option {
+	return func(err *ErrMessage) {
+		err.InternalCode = code
 	}
 }
 
