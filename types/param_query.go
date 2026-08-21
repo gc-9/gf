@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,6 +155,35 @@ func (f *Filters) GetTimeRange(key string) []string {
 		}
 	}
 	return nil
+}
+
+func (f *Filters) GetNumberRange(key string) []*float64 {
+	values, ok := (*f)[key].([]interface{})
+	if !ok || len(values) != 2 {
+		return nil
+	}
+
+	result := make([]*float64, 2)
+	for i, value := range values {
+		if value == nil {
+			continue
+		}
+
+		str := strings.TrimSpace(fmt.Sprint(value))
+		if str == "" {
+			continue
+		}
+
+		number, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			return nil
+		}
+		result[i] = &number
+	}
+	if result[0] == nil && result[1] == nil {
+		return nil
+	}
+	return result
 }
 
 func (f *Filters) ValueString(k string) string {
