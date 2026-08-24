@@ -45,6 +45,9 @@ func (p *OperationLogController) Index(param *types.ParamPageQuery) (*types.Page
 	var allowFilters = []string{
 		"uid",
 		"keyword",
+		"username",
+		"name",
+		"createdAt",
 	}
 	param.Filters.Allows(allowFilters)
 
@@ -60,11 +63,13 @@ func (p *OperationLogController) Index(param *types.ParamPageQuery) (*types.Page
 			case "keyword":
 				v := "%" + param.Filters.ValueString(key) + "%"
 				session.Where("l.action like ? or l.data like ? or l.method like ?", v, v, v)
-				/*session.Where(builder.Or(
-					builder.Like{"l.action", f.ValueString()},
-					builder.Like{"l.data=1 and l.data", f.ValueString()},
-					builder.Like{"l.method", f.ValueString()},
-				))*/
+			case "username", "name":
+				v := "%" + param.Filters.ValueString(key) + "%"
+				session.Where("u."+key+" LIKE ?", v)
+			case "createdAt":
+				if timeRange := param.Filters.GetTimeRange(key); timeRange != nil {
+					session.Where("l.created_at BETWEEN ? AND ?", timeRange[0], timeRange[1])
+				}
 			default:
 				session.Where(builder.Eq{"l." + key: f})
 			}

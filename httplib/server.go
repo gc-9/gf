@@ -196,7 +196,7 @@ func pushRequestLog(client *loki.Client, labels loki.Labels, req *http.Request, 
 	}
 
 	level := "debug"
-	if requestErr != nil || status >= http.StatusInternalServerError {
+	if status >= http.StatusInternalServerError {
 		level = "error"
 	}
 	line := map[string]any{
