@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	altcha "github.com/altcha-org/altcha-lib-go"
 	"github.com/gc-9/gf/auth"
 	"github.com/gc-9/gf/config"
 	"github.com/gc-9/gf/errors"
@@ -17,9 +18,10 @@ import (
 )
 
 func NewPassportController(adminService *auth_services.AdminService,
-	captchaService auth.CaptchaProvide, confServer *config.Server) httplib.Router {
+	altchaService *auth.AltchaService, captchaService auth.CaptchaProvide, confServer *config.Server) httplib.Router {
 	return &PassportController{
 		adminService:   adminService,
+		altchaService:  altchaService,
 		captchaService: captchaService,
 		confServer:     confServer,
 	}
@@ -27,6 +29,7 @@ func NewPassportController(adminService *auth_services.AdminService,
 
 type PassportController struct {
 	adminService   *auth_services.AdminService
+	altchaService  *auth.AltchaService
 	captchaService auth.CaptchaProvide
 	confServer     *config.Server
 }
@@ -34,6 +37,7 @@ type PassportController struct {
 func (p *PassportController) Routes() []*httplib.Route {
 	return []*httplib.Route{
 		httplib.NewRoute("POST", "/passport/login", "", p.Login),
+		httplib.NewRoute("GET", "/passport/altcha", "", p.Altcha),
 		httplib.NewRoute("GET", "/passport/captcha", "", p.Captcha),
 		httplib.NewRoute("GET", "/passport/logout", "", p.Logout),
 		httplib.NewRoute("GET", "/passport/user", "", p.User),
@@ -41,19 +45,44 @@ func (p *PassportController) Routes() []*httplib.Route {
 }
 
 type LoginParam struct {
-	Username  string `json:"username" validate:"required"`
-	Password  string `json:"password" validate:"required"`
-	CaptchaId string `json:"captchaId" validate:"required"`
-	Captcha   string `json:"captcha" validate:"required"`
+	Username     string `json:"username" validate:"required"`
+	Password     string `json:"password" validate:"required"`
+	SecurityMode string `json:"securityMode" validate:"required"`
+	Altcha       string `json:"altcha"`
+	CaptchaId    string `json:"captchaId"`
+	Captcha      string `json:"captcha"`
 }
 
 func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam) (map[string]interface{}, error) {
-	ok, err := p.captchaService.Validate(param.CaptchaId, param.Captcha)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, errors.Public("验证码错误")
+	var err error
+
+	switch param.SecurityMode {
+	case "altcha":
+		if param.Altcha == "" {
+			return nil, errors.Public("请完成安全验证")
+		}
+
+		ok, err := p.altchaService.Validate(ctx.Request().Context(), param.Altcha)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.Public("安全验证失败，请重试")
+		}
+	case "captcha":
+		if param.CaptchaId == "" || param.Captcha == "" {
+			return nil, errors.Public("请完成安全验证")
+		}
+
+		ok, err := p.captchaService.Validate(param.CaptchaId, param.Captcha)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.Public("验证码错误")
+		}
+	default:
+		return nil, errors.Public("不支持的安全验证方式")
 	}
 
 	var user *types.Admin
@@ -166,6 +195,10 @@ func (p *PassportController) Logout(ctx httplib.RequestContext) error {
 	return nil
 }
 
+func (p *PassportController) Altcha() (*altcha.Challenge, error) {
+	return p.altchaService.Alloc()
+}
+
 func (p *PassportController) Captcha() (*auth.CaptchaAlloc, error) {
-	return p.captchaService.Alloc(210, 70)
+	return p.captchaService.Alloc(114, 38)
 }

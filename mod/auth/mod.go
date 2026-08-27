@@ -21,6 +21,7 @@ var (
 		func(servConf *config.Server, redisClient *redis.Client, encryptService *auth.EncryptService) *auth.AuthService {
 			return auth.NewAuthService(servConf.Auth, redisClient, encryptService)
 		},
+		auth.NewAltchaService,
 		auth.NewCaptcha2Service,
 		auth_services.NewPermissionService,
 		auth_services.NewRoleService,

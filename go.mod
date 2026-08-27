@@ -1,10 +1,11 @@
 module github.com/gc-9/gf
 
-go 1.22
+go 1.22.5
 
 require (
 	github.com/afocus/captcha v0.0.0-20191010092841-4bd1f21c8868
 	github.com/aliyun/alibabacloud-oss-go-sdk-v2 v1.2.3
+	github.com/altcha-org/altcha-lib-go v1.0.0
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
