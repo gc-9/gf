@@ -174,7 +174,12 @@ func newServer(conf *config.Config, i18n i18n.I18n, servConf *config.Server, lok
 	// limit
 	//e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(10)))
 
-	e.Use(middleware.CORS())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		Skipper:      middleware.DefaultSkipper,
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+		MaxAge:       3600, // 1 hour
+	}))
 	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
 		StackSize:         4 << 10, // 4 KB
 		DisablePrintStack: false,

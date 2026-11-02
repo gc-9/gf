@@ -18,7 +18,7 @@ const (
 	defaultAPIBaseURL = "https://api.weixin.qq.com"
 	httpTimeout       = 5 * time.Second
 	tokenRefreshAhead = 5 * time.Minute
-	alertDataMaxRunes = 100
+	alertDataMaxRunes = 300
 )
 
 // Config 是微信服务号凭证配置。
@@ -67,9 +67,22 @@ func (s *Client) SendAlert(level, message string, count int) error {
 		ToUser:     s.toUser,
 		TemplateID: s.templateID,
 		Data: TemplateData{
+			"time":    {Value: time.Now().Format("2006-01-02 15:04")},
 			"title":   {Value: title},
 			"content": {Value: truncateAlertData(message)},
 		},
+	})
+	return err
+}
+
+func (s *Client) SendCustom(templateID string, tmplateData TemplateData) error {
+	for _, v := range tmplateData {
+		v.Value = truncateAlertData(v.Value)
+	}
+	_, err := s.SendTemplateMessage(context.Background(), &TemplateMessage{
+		ToUser:     s.toUser,
+		TemplateID: templateID,
+		Data:       tmplateData,
 	})
 	return err
 }
