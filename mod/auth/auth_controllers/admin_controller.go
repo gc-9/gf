@@ -28,6 +28,8 @@ func (p *adminController) Routes() []*httplib.Route {
 		httplib.NewRoute("POST", "/admin/show", "管理员-查看", p.Show),
 		httplib.NewRoute("POST", "/admin/store", "管理员-保存", p.Store),
 		httplib.NewRoute("POST", "/admin/toggleStatus", "管理员-状态更新", p.ToggleStatus),
+		httplib.NewRoute("POST", "/admin/unlock", "管理员-解除登录锁定", p.Unlock),
+		httplib.NewRoute("POST", "/admin/unlockIP", "管理员-解除IP登录锁定", p.UnlockIP),
 		httplib.NewRoute("GET", "/admin/showSelf", "管理员-查看自己", p.ShowSelf),
 		httplib.NewRoute("POST", "/admin/storeSelf", "管理员-保存自己", p.StoreSelf),
 	}
@@ -65,6 +67,18 @@ type paramPassportShow struct {
 
 func (p *adminController) Show(param *paramPassportShow) (*adminTypes.Admin_RoleId, error) {
 	return p.adminService.GetAdminWithRoleId(param.ID)
+}
+
+func (p *adminController) Unlock(param *paramPassportShow) error {
+	return p.adminService.UnlockLogin(param.ID)
+}
+
+type paramUnlockIP struct {
+	IP string `json:"ip" validate:"required,ip"`
+}
+
+func (p *adminController) UnlockIP(ctx httplib.RequestContext, param *paramUnlockIP) error {
+	return p.adminService.UnlockLoginIP(ctx.Request().Context(), param.IP)
 }
 
 func (p *adminController) ShowSelf(ctx httplib.RequestContext) (map[string]interface{}, error) {

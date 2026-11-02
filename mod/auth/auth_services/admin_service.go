@@ -3,6 +3,7 @@ package auth_services
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"strconv"
 	"time"
 
@@ -66,8 +67,13 @@ func (t *AdminService) ListAdminRole(param *types.ParamPageQuery) (*types.PagerD
 		return nil, err
 	}
 
+	now := time.Now()
 	for _, v := range pagerData.List {
 		v.Role, _ = roleMap[v.RoleId]
+		if v.LoginUnlockAt != nil && v.LoginUnlockAt.After(now) {
+			v.LoginLocked = true
+			v.LoginWaitSeconds = int64(math.Ceil(v.LoginUnlockAt.Sub(now).Seconds()))
+		}
 	}
 	return pagerData, nil
 }
@@ -113,29 +119,74 @@ func (t *AdminService) CreateAdmin(roleId int, admin *adminTypes.Admin) (*adminT
 	return admin, err
 }
 
-func (t *AdminService) CheckLoginFailTimes(uid int) (*time.Duration, error) {
-	duration := 10 * time.Minute
-	maxFailTimes := int64(5)
+func loginFailWaitTime(failTimes int64) time.Duration {
+	if failTimes < 3 {
+		return 0
+	}
+	duration := 30 * time.Second
+	for i := int64(3); i < failTimes && duration < 5*time.Minute; i++ {
+		duration = min(duration*2, 5*time.Minute)
+	}
+	return duration
+}
 
-	c, err := t.db.Where("uid=? AND action=? AND created_at >= ?", uid, "login_fail", time.Now().Add(-duration)).Count(&adminTypes.AdminLog{})
+// RecordLoginFailure 在同一事务中累加次数并设置解锁时间，日志不参与状态维护。
+func (t *AdminService) RecordLoginFailure(uid int) (wait, nextWait time.Duration, err error) {
+	tx := t.db.NewSession()
+	defer tx.Close()
+	if err = tx.Begin(); err != nil {
+		return 0, 0, errors.PublicWrap(err, "dbError")
+	}
+	defer tx.Rollback()
+
+	// 更新先取得行锁，避免并发失败丢失计数；等待期间不重复计数。
+	now := time.Now()
+	affected, err := tx.ID(uid).
+		Where("login_unlock_at IS NULL OR login_unlock_at <= ?", now.In(t.db.DatabaseTZ).Format(time.DateTime)).
+		Incr("login_fail_times", 1).Update(&adminTypes.Admin{})
 	if err != nil {
-		return nil, errors.PublicWrap(err, "dbError")
+		return 0, 0, errors.PublicWrap(err, "dbError")
 	}
-
-	if c > maxFailTimes {
-		var lastOne adminTypes.AdminLog
-		has, err := t.db.Where("uid=? AND action=? AND created_at >= ?", uid, "login_fail", time.Now().Add(-duration)).
-			OrderBy("id DESC").Get(&lastOne)
+	var admin adminTypes.Admin
+	has, err := tx.ID(uid).Get(&admin)
+	if err != nil {
+		return 0, 0, errors.PublicWrap(err, "dbError")
+	}
+	if !has {
+		return 0, 0, errors.Public("用户不存在")
+	}
+	nextWait = loginFailWaitTime(admin.LoginFailTimes + 1)
+	if affected == 0 {
+		if admin.LoginUnlockAt != nil {
+			wait = max(0, time.Until(*admin.LoginUnlockAt))
+		}
+		return wait, nextWait, nil
+	}
+	wait = loginFailWaitTime(admin.LoginFailTimes)
+	if wait > 0 {
+		unlockAt := time.Now().Add(wait)
+		_, err = tx.ID(uid).Cols("login_unlock_at").Update(&adminTypes.Admin{LoginUnlockAt: &unlockAt})
 		if err != nil {
-			return nil, errors.PublicWrap(err, "dbError")
+			return 0, 0, errors.PublicWrap(err, "dbError")
 		}
-		if !has {
-			return nil, nil
-		}
-		diff := duration - time.Now().Sub(lastOne.CreatedAt)
-		return &diff, nil
 	}
-	return nil, nil
+	return wait, nextWait, errors.PublicWrap(tx.Commit(), "dbError")
+}
+
+// UnlockLogin 手动清除登录锁定，不删除或查询日志。
+func (t *AdminService) UnlockLogin(uid int) error {
+	has, err := t.Exist(uid)
+	if err != nil {
+		return err
+	}
+	if !has {
+		return errors.Public("用户不存在")
+	}
+	_, err = t.db.Table(&adminTypes.Admin{}).ID(uid).Update(map[string]interface{}{
+		"login_fail_times": 0,
+		"login_unlock_at":  nil,
+	})
+	return errors.PublicWrap(err, "dbError")
 }
 
 func (t *AdminService) CreateLoginFailLog(uid int, ip string, userAgent string) error {

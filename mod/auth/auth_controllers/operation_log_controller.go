@@ -44,6 +44,8 @@ func (p *OperationLogController) Defined(ctx httplib.RequestContext) (map[string
 func (p *OperationLogController) Index(param *types.ParamPageQuery) (*types.PagerData[*adminTypes.AdminLogFull], error) {
 	var allowFilters = []string{
 		"uid",
+		"ip",
+		"action",
 		"keyword",
 		"username",
 		"name",

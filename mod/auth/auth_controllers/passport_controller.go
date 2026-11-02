@@ -54,8 +54,6 @@ type LoginParam struct {
 }
 
 func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam) (map[string]interface{}, error) {
-	var err error
-
 	switch param.SecurityMode {
 	case "altcha":
 		if param.Altcha == "" {
@@ -85,26 +83,69 @@ func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam
 		return nil, errors.Public("不支持的安全验证方式")
 	}
 
+	ip := ctx.RealIP()
+	wait, _, err := p.adminService.LoginIPLimit(ctx.Request().Context(), ip, false)
+	if err != nil {
+		return nil, err
+	}
+	if wait > 0 {
+		return nil, errors.Public(fmt.Sprintf("当前IP被禁止，请%.0f秒后再试", math.Ceil(wait.Seconds())))
+	}
+
 	var user *types.Admin
 	user, err = p.adminService.GetByUserName(param.Username)
 	if err != nil {
 		return nil, err
 	}
 	if user == nil {
+		ipWait, newlyLocked, err := p.adminService.LoginIPLimit(ctx.Request().Context(), ip, true)
+		if err != nil {
+			return nil, err
+		}
+		if newlyLocked {
+			if err := p.adminService.CreateLoginIPLockLog(ip, util.Substring(ctx.Request().UserAgent(), 0, 200), ipWait); err != nil {
+				logger.Logger().Error(err)
+			}
+		}
+		if ipWait > 0 {
+			return nil, errors.Public(fmt.Sprintf("当前IP被禁止，请%.0f秒后再试", math.Ceil(ipWait.Seconds())))
+		}
 		return nil, errors.Public("用户名或密码错误")
 	}
 
-	// 检查错误次数
-	dueTime, err := p.adminService.CheckLoginFailTimes(user.ID)
-	if err != nil {
-		return nil, err
-	}
-	if dueTime != nil {
-		return nil, errors.Public(fmt.Sprintf("错误次数过多，%.0f分钟后再试", math.Ceil(dueTime.Minutes())))
+	if user.LoginUnlockAt != nil {
+		if remaining := time.Until(*user.LoginUnlockAt); remaining > 0 {
+			return nil, errors.Public(fmt.Sprintf("账号登录失败次数过多，请%.0f秒后再试", math.Ceil(remaining.Seconds())))
+		}
 	}
 
 	if !auth.CompareHashAndPassword(user.Password, param.Password) {
-		_ = p.adminService.CreateLoginFailLog(user.ID, ctx.RealIP(), util.Substring(ctx.Request().UserAgent(), 0, 200))
+		// 用户名正确、密码错误时，同时增加 IP 和账号失败次数。
+		ipWait, newlyLocked, err := p.adminService.LoginIPLimit(ctx.Request().Context(), ip, true)
+		if err != nil {
+			return nil, err
+		}
+		if newlyLocked {
+			if err := p.adminService.CreateLoginIPLockLog(ip, util.Substring(ctx.Request().UserAgent(), 0, 200), ipWait); err != nil {
+				logger.Logger().Error(err)
+			}
+		}
+		currentWait, nextWait, err := p.adminService.RecordLoginFailure(user.ID)
+		if err != nil {
+			logger.Logger().Error(err)
+		}
+		if err := p.adminService.CreateLoginFailLog(user.ID, ip, util.Substring(ctx.Request().UserAgent(), 0, 200)); err != nil {
+			logger.Logger().Error(err)
+		}
+		if ipWait > 0 {
+			return nil, errors.Public(fmt.Sprintf("当前IP被禁止，请%.0f秒后再试", math.Ceil(ipWait.Seconds())))
+		}
+		if currentWait > 0 {
+			if nextWait > 0 {
+				return nil, errors.Public(fmt.Sprintf("用户名或密码错误，请%.0f秒后重试；再次失败需等待%.0f秒", math.Ceil(currentWait.Seconds()), nextWait.Seconds()))
+			}
+			return nil, errors.Public(fmt.Sprintf("账号登录失败次数过多，请%.0f秒后再试", math.Ceil(currentWait.Seconds())))
+		}
 		return nil, errors.Public("用户名或密码错误")
 	}
 
@@ -125,21 +166,27 @@ func (p *PassportController) Login(ctx httplib.RequestContext, param *LoginParam
 	// data
 	data := map[string]interface{}{}
 
-	// update last login
-	up := types.Admin{
-		LastLoginAt: time.Now(),
-		LastLoginIP: ctx.RealIP(),
-	}
-	_, err = p.adminService.Update(user.ID, &up)
-	if err != nil {
-		return nil, err
-	}
-
 	// token
 	token, err := p.adminService.MakeLogin(user.ID, ctx.Request().UserAgent())
 	if err != nil {
 		return nil, err
 	}
+
+	// 更新最后登录信息并清除锁定，使用 map 确保写入零值和 NULL。
+	loginAt, loginIP := time.Now(), ip
+	_, err = p.adminService.Update(user.ID, map[string]interface{}{
+		"last_login_at":    loginAt,
+		"last_login_ip":    loginIP,
+		"login_fail_times": 0,
+		"login_unlock_at":  nil,
+	})
+	if err != nil {
+		return nil, err
+	}
+	user.LastLoginAt = loginAt
+	user.LastLoginIP = loginIP
+	user.LoginFailTimes = 0
+	user.LoginUnlockAt = nil
 
 	err = p.adminService.CreateLoginLog(user.ID, role.ID, ctx.RealIP(), util.Substring(ctx.Request().UserAgent(), 0, 200))
 	if err != nil {

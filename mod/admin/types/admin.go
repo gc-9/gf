@@ -19,6 +19,9 @@ type Admin struct {
 	LastLoginAt time.Time `json:"lastLoginAt" xorm:"'last_login_at'"`
 	CreatedAt   time.Time `json:"createdAt" xorm:"created 'created_at'"`
 	UpdatedAt   time.Time `json:"updatedAt" xorm:"updated 'updated_at'"`
+
+	LoginFailTimes int64      `json:"loginFailTimes" xorm:"notnull default 0 'login_fail_times'"`
+	LoginUnlockAt  *time.Time `json:"loginUnlockAt" xorm:"'login_unlock_at'"`
 }
 
 func (t *Admin) TableName() string {
@@ -40,6 +43,9 @@ type Admin_RoleId struct {
 	LastLoginAt time.Time `json:"lastLoginAt" xorm:"'last_login_at'"`
 	CreatedAt   time.Time `json:"createdAt" xorm:"created 'created_at'"`
 	UpdatedAt   time.Time `json:"updatedAt" xorm:"updated 'updated_at'"`
+
+	LoginFailTimes int64      `json:"loginFailTimes" xorm:"notnull default 0 'login_fail_times'"`
+	LoginUnlockAt  *time.Time `json:"loginUnlockAt" xorm:"'login_unlock_at'"`
 
 	RoleKey string `json:"roleKey,omitempty" xorm:"role_key"`
 	RoleId  int    `json:"roleId,omitempty" xorm:"role_id"`
@@ -68,10 +74,16 @@ type Admin_R struct {
 	CreatedAt   time.Time `json:"createdAt" xorm:"created 'created_at'"`
 	UpdatedAt   time.Time `json:"updatedAt" xorm:"updated 'updated_at'"`
 
+	LoginFailTimes int64      `json:"loginFailTimes" xorm:"notnull default 0 'login_fail_times'"`
+	LoginUnlockAt  *time.Time `json:"loginUnlockAt" xorm:"'login_unlock_at'"`
+
 	Role        *AuthRole         `json:"role,omitempty" xorm:"-"`
 	RoleId      int               `json:"roleId,omitempty" xorm:"role_id"`
 	RoleKey     string            `json:"roleKey,omitempty" xorm:"role_key"`
 	Permissions []*AuthPermission `json:"permissions,omitempty" xorm:"-"`
+
+	LoginLocked      bool  `json:"loginLocked" xorm:"-"`
+	LoginWaitSeconds int64 `json:"loginWaitSeconds" xorm:"-"`
 }
 
 func (t *Admin_R) TableName() string {
