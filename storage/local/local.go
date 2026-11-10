@@ -18,7 +18,7 @@ type LocalOptions struct {
 
 func NewLocal(op *LocalOptions) (*Local, error) {
 	root := path.Dir(op.Root + "/")
-	err := os.MkdirAll(root, 0644)
+	err := os.MkdirAll(root, 0755)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (s *Local) Put(ctx context.Context, key string, r io.Reader) (*storage.File
 	key = strings.TrimLeft(key, "/")
 	fp := s.root + "/" + key
 
-	err := os.MkdirAll(path.Dir(fp), 0644)
+	err := os.MkdirAll(path.Dir(fp), 0755)
 	if err != nil {
 		return nil, errors.Wrap(err, "local MkdirAll failed")
 	}
@@ -130,7 +130,7 @@ func (s *Local) Copy(ctx context.Context, key string, targetKey string) error {
 	}
 	defer dest.Close()
 
-	err = os.MkdirAll(path.Dir(tf), 0644)
+	err = os.MkdirAll(path.Dir(tf), 0755)
 	if err != nil {
 		return errors.Wrap(err, "local MkdirAll failed")
 	}
